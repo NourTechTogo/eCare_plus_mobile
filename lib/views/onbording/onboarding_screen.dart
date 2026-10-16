@@ -37,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingData(
       title: 'Maîtrisez votre\nparcours de soin',
       subtitle:
-          'Enregistrez vos constantes vitales et retrouvez leur évolution dans votre suivi.',
+          'Enregistrez vos constantes vitales et suivez évolution de votre etat de santé',
       imagePath: 'assets/images/ecareImage1.png',
     ),
     _OnboardingData(
