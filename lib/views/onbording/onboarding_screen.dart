@@ -37,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingData(
       title: 'Maîtrisez votre\nparcours de soin',
       subtitle:
-          'Enregistrez vos constantes vitales et suivez évolution de votre etat de santé',
+          'Enregistrez vos constantes vitales et suivez évolution de votre état de santé',
       imagePath: 'assets/images/ecareImage1.png',
     ),
     _OnboardingData(
@@ -49,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingData(
       title: '  Reprenez le pouvoir\nsur votre santé',
       subtitle:
-          'Avec eCARE+, retrouvez vos mesures, vos documents médicaux et votre agenda au même endroit.',
+          'Avec eCare+, retrouvez vos mesures, vos documents médicaux et votre agenda au même endroit.',
       imagePath: 'assets/images/ecareImage3.png',
     ),
   ];

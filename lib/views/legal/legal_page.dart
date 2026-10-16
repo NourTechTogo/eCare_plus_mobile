@@ -19,55 +19,48 @@ class LegalPage extends StatelessWidget {
     required this.icon,
     required this.sections,
   });
+
   @override
   Widget build(BuildContext context) => CarePage(
     title: title,
-    subtitle: 'eCARE+ · Mise à jour du 8 octobre 2026',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CareCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: AppColors.primary, size: 30),
-              const SizedBox(height: 14),
-              Text(
-                'Version de développement',
-                style: AppDecor.t(15, w: FontWeight.w700, c: AppColors.primary),
-              ),
-              const SizedBox(height: 8),
-              SelectableText(
-                introduction,
-                style: AppDecor.t(13, c: AppColors.textMuted, h: 1.6),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        for (final section in sections) ...[
-          CareCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    section.title,
-                    style: AppDecor.t(16, w: FontWeight.w700),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SelectableText(
-                  section.body,
-                  style: AppDecor.t(13, c: AppColors.textMuted, h: 1.7),
-                ),
-              ],
-            ),
-          ),
+    subtitle: 'eCARE+ · Mise à jour du 16 octobre 2026',
+    child: CareCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primary, size: 28),
           const SizedBox(height: 14),
+          Text(
+            'Version de développement',
+            style: AppDecor.t(13, w: FontWeight.w600, c: AppColors.primary),
+          ),
+          const SizedBox(height: 12),
+          SelectableText(
+            introduction,
+            style: AppDecor.t(14, c: AppColors.textDark, h: 1.8),
+          ),
+          for (final section in sections) ...[
+            const SizedBox(height: 28),
+            Semantics(
+              header: true,
+              child: Text(
+                section.title,
+                style: AppDecor.t(
+                  17,
+                  w: FontWeight.w700,
+                  c: AppColors.primaryDeep,
+                  h: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              section.body,
+              style: AppDecor.t(14, c: AppColors.textDark, h: 1.8),
+            ),
+          ],
         ],
-      ],
+      ),
     ),
   );
 }
