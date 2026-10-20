@@ -93,7 +93,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('Prendre rendez-vous'), 200);
     await tester.tap(find.text('Prendre rendez-vous'));
     await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsWidgets);
+    expect(find.text('Disponibilités de démonstration'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

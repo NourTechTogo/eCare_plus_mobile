@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/care_date_time_picker.dart';
+import '../../widgets/appointment_availability_form.dart';
 import 'package:provider/provider.dart';
 import '../../models/care_data.dart';
 import '../../utils/app_colors.dart';
@@ -47,7 +47,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
             CareCard(
               child: Column(
                 children: [
-                  _AppointmentForm(
+                  AppointmentAvailabilityForm(
                     doctor: widget.initialDoctor,
                     onSaved: _save,
                   ),
@@ -69,7 +69,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
               icon: Icons.event_available_outlined,
               title: 'Votre agenda est libre',
               description:
-                  'Ajoutez un rendez-vous déjà convenu avec votre médecin pour le retrouver ici.',
+                  'Choisissez votre médecin et un créneau disponible pour planifier votre consultation.',
             )
           else
             for (final appointment in appointments) ...[
@@ -159,126 +159,6 @@ Future<void> openAppointmentsPage(
     context,
     MaterialPageRoute<void>(
       builder: (_) => AppointmentsPage(initialDoctor: doctor),
-    ),
-  );
-}
-
-class _AppointmentForm extends StatefulWidget {
-  final String doctor;
-  final ValueChanged<CareAppointment> onSaved;
-  const _AppointmentForm({required this.doctor, required this.onSaved});
-  @override
-  State<_AppointmentForm> createState() => _AppointmentFormState();
-}
-
-class _AppointmentFormState extends State<_AppointmentForm> {
-  final _form = GlobalKey<FormState>();
-  late final _doctor = TextEditingController(text: widget.doctor);
-  DateTime? _day;
-  TimeOfDay? _time;
-  String? _error;
-  @override
-  void dispose() {
-    _doctor.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.zero,
-    child: SingleChildScrollView(
-      child: Form(
-        key: _form,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ajouter une consultation',
-              style: AppDecor.t(21, w: FontWeight.w700),
-            ),
-            const SizedBox(height: 22),
-            TextFormField(
-              controller: _doctor,
-              decoration: const InputDecoration(
-                labelText: 'Médecin',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value == null || value.trim().isEmpty
-                  ? 'Indiquez le nom du médecin'
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.calendar_month_outlined,
-                color: AppColors.primary,
-              ),
-              title: Text(_day == null ? 'Choisir une date' : careDate(_day!)),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () async {
-                final now = DateTime.now();
-                final picked = await showCareDatePicker(
-                  context: context,
-                  initialDate: _day ?? now,
-                  firstDate: DateTime(now.year, now.month, now.day),
-                  lastDate: DateTime(now.year + 3),
-                );
-                if (picked != null && mounted) setState(() => _day = picked);
-              },
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.schedule_rounded,
-                color: AppColors.primary,
-              ),
-              title: Text(
-                _time == null ? 'Choisir une heure' : _time!.format(context),
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () async {
-                final picked = await showCareTimePicker(
-                  context: context,
-                  initialTime: _time ?? TimeOfDay.now(),
-                );
-                if (picked != null && mounted) setState(() => _time = picked);
-              },
-            ),
-            if (_error != null)
-              Text(_error!, style: AppDecor.t(12, c: AppColors.required)),
-            const SizedBox(height: 22),
-            GradientButton(
-              text: 'Enregistrer dans mon agenda',
-              onPressed: () {
-                if (!_form.currentState!.validate()) return;
-                if (_day == null || _time == null) {
-                  setState(() => _error = 'Choisissez la date et l’heure.');
-                  return;
-                }
-                final date = DateTime(
-                  _day!.year,
-                  _day!.month,
-                  _day!.day,
-                  _time!.hour,
-                  _time!.minute,
-                );
-                if (!date.isAfter(DateTime.now())) {
-                  setState(
-                    () => _error = 'Choisissez une date et une heure à venir.',
-                  );
-                  return;
-                }
-                widget.onSaved(
-                  CareAppointment(doctor: _doctor.text.trim(), date: date),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     ),
   );
 }

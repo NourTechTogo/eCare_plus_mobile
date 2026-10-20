@@ -1,5 +1,6 @@
 import 'dart:ui' show PathMetric;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_text_styles.dart';
 import 'page_header.dart';
@@ -49,74 +50,83 @@ class _AuthHeaderState extends State<AuthHeader>
   @override
   Widget build(BuildContext context) {
     const deep = AppColors.primaryDeep;
-    return ClipPath(
-      clipper: _WaveClipper(),
-      child: Container(
-        constraints: BoxConstraints(minHeight: widget.height),
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [deep, AppColors.primary, AppColors.primaryAccent],
-            stops: const [0, .55, 1],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: ClipPath(
+        clipper: _WaveClipper(),
+        child: Container(
+          constraints: BoxConstraints(minHeight: widget.height),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [deep, AppColors.primary, AppColors.primaryAccent],
+              stops: const [0, .55, 1],
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(top: -70, right: -50, child: _Orb(size: 220, alpha: 22)),
-            Positioned(top: 90, left: -80, child: _Orb(size: 170, alpha: 14)),
-            if (widget.showEcg)
-              Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _pulse,
-                  builder: (_, _) => CustomPaint(
-                    painter: _EcgPainter(
-                      Curves.easeInOut.transform(_pulse.value),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -70,
+                right: -50,
+                child: _Orb(size: 220, alpha: 22),
+              ),
+              Positioned(top: 90, left: -80, child: _Orb(size: 170, alpha: 14)),
+              if (widget.showEcg)
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _pulse,
+                    builder: (_, _) => CustomPaint(
+                      painter: _EcgPainter(
+                        Curves.easeInOut.transform(_pulse.value),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                // Leave room for the wave and the overlapping form card.
-                padding: const EdgeInsets.fromLTRB(26, 10, 26, 64),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (widget.showBack) ...[
-                          PageBackButton(
-                            color: Colors.white,
-                            backgroundColor: Colors.white.withAlpha(45),
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  // Leave room for the wave and the overlapping form card.
+                  padding: const EdgeInsets.fromLTRB(26, 10, 26, 64),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (widget.showBack) ...[
+                            PageBackButton(
+                              color: Colors.white,
+                              backgroundColor: Colors.white.withAlpha(45),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          const Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: _LogoMark(),
+                            ),
                           ),
-                          const SizedBox(width: 12),
                         ],
-                        const Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: _LogoMark(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    PageHeader(
-                      title: widget.title,
-                      subtitle: widget.subtitle,
-                      showBack: false,
-                      titleColor: Colors.white,
-                      subtitleColor: Colors.white.withAlpha(215),
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 22),
+                      PageHeader(
+                        title: widget.title,
+                        subtitle: widget.subtitle,
+                        showBack: false,
+                        titleColor: Colors.white,
+                        subtitleColor: Colors.white.withAlpha(215),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
