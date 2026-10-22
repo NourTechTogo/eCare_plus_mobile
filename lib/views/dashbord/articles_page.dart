@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/article_catalog.dart';
 import '../../utils/app_colors.dart';
@@ -234,26 +235,6 @@ class _ArticlesPageState extends State<ArticlesPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 3),
-                      child: Icon(
-                        Icons.info_outline_rounded,
-                        size: 15,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Text(
-                        'Collection de démonstration · Publications à venir',
-                        style: AppDecor.t(10, c: AppColors.textMuted),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 24),
                 if (browsing) ...[
                   _sectionTitle('À la une', 'Votre pause lecture'),
@@ -279,7 +260,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
                 ] else ...[
                   _sectionTitle(
                     _favoritesOnly ? 'Mes favoris' : 'Votre sélection',
-                    '${results.length} aperçu${results.length == 1 ? '' : 's'} à découvrir',
+                    '${results.length} ${results.length == 1 ? 'article disponible' : 'articles disponibles'}',
                   ),
                   const SizedBox(height: 16),
                   if (results.isEmpty)
@@ -391,27 +372,6 @@ class _ArticlesPageState extends State<ArticlesPage> {
               style: AppDecor.t(12, c: const Color(0xFF42718C)),
             ),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Équipe Ecare+ · Exemple',
-                    style: AppDecor.t(10, c: const Color(0xFF42718C)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Lire l’aperçu',
-              style: AppDecor.t(12, w: FontWeight.w700, c: _editorialBlue),
-            ),
           ],
         ),
       ),
@@ -447,8 +407,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
                 a.title,
                 AppDecor.t(15, w: FontWeight.w600, h: 1.35),
                 maxLines: 3,
-              ) +
-              textHeight('Équipe Ecare+ · Aperçu', AppDecor.t(10)),
+              ),
         )
         .fold<double>(0, (largest, next) => next > largest ? next : largest);
     return SizedBox(
@@ -498,7 +457,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
         const SizedBox(height: 8),
         Text(
           _favoritesOnly
-              ? 'Enregistrez vos aperçus préférés avec le marque-page, ou explorez un autre thème.'
+          ? 'Enregistrez vos articles préférés avec le marque-page, ou explorez un autre thème.'
               : 'Essayez un autre mot ou un autre thème.',
           textAlign: TextAlign.center,
           style: AppDecor.t(12, c: AppColors.textMuted),
@@ -599,11 +558,6 @@ class _ArticleCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppDecor.t(15, w: FontWeight.w600, h: 1.35),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Équipe Ecare+ · Aperçu',
-                  style: AppDecor.t(10, c: AppColors.textMuted),
-                ),
               ],
             ),
           ),
@@ -641,7 +595,7 @@ class _ArticleReaderState extends State<_ArticleReader> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
               children: [
                 PageHeader(
-                  title: 'Aperçu éditorial',
+                  title: 'Article',
                   action: _SaveButton(
                     header: true,
                     saved: widget.isSaved(),
@@ -675,50 +629,52 @@ class _ArticleReaderState extends State<_ArticleReader> {
                   article.title,
                   style: AppDecor.t(27, w: FontWeight.w700, h: 1.3),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Équipe Ecare+ · Contenu de démonstration',
-                  style: AppDecor.t(11, c: AppColors.textMuted),
-                ),
                 const SizedBox(height: 24),
                 Text(article.introduction, style: AppDecor.t(15, h: 1.8)),
-                const SizedBox(height: 26),
-                Text(
-                  'Dans cet article à venir',
-                  style: AppDecor.t(18, w: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                for (final topic in article.topics)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
+                const SizedBox(height: 28),
+                for (final section in article.sections) ...[
+                  Text(
+                    section.title,
+                    style: AppDecor.t(18, w: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(section.body, style: AppDecor.t(14, h: 1.75)),
+                  const SizedBox(height: 22),
+                ],
+                if (article.sources.isNotEmpty) ...[
+                  Text('Sources', style: AppDecor.t(17, w: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  for (final source in article.sources)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: InkWell(
+                        onTap: () => launchUrl(
+                          Uri.parse(source.url),
+                          mode: LaunchMode.externalApplication,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(topic, style: AppDecor.t(14))),
-                      ],
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                source.title,
+                                style: AppDecor.t(
+                                  12,
+                                  c: AppColors.primary,
+                                ).copyWith(decoration: TextDecoration.underline),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLighter,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Vous consultez un aperçu de la future bibliothèque. Le contenu complet, son auteur et sa durée de lecture apparaîtront lors de la publication.',
-                    style: AppDecor.t(12, c: const Color(0xFF42718C)),
-                  ),
-                ),
+                ],
               ],
             ),
           ),

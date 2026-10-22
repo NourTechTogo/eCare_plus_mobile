@@ -10,6 +10,7 @@ import 'appointments_page.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/patient_avatar.dart';
 import '../../widgets/doctor_message_button.dart';
+import '../messaging/doctor_contact_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -362,7 +363,18 @@ class _DoctorCard extends StatelessWidget {
   final CareDoctor doctor;
   const _DoctorCard({required this.doctor});
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    borderRadius: BorderRadius.circular(24),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => DoctorContactPage(doctor: doctor),
+        ),
+      ),
+      child: Container(
     width: 210,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
@@ -432,6 +444,8 @@ class _DoctorCard extends StatelessWidget {
           ],
         ),
       ],
+    ),
+      ),
     ),
   );
 }

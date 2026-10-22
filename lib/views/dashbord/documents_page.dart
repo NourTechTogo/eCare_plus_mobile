@@ -5,7 +5,6 @@ import '../../services/document_library.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import '../../widgets/care_page.dart';
-import '../../widgets/gradient_button.dart';
 import '../../widgets/document_import_sheet.dart';
 import '../../widgets/document_filter_sheet.dart';
 
@@ -215,11 +214,23 @@ class _DocumentsPageState extends State<DocumentsPage> {
       return CarePage(
         title: 'Mes documents',
         subtitle: 'Votre carnet de santé, à portée de main.',
+        floatingActionButton: FloatingActionButton(
+          onPressed: _working ? null : _add,
+          tooltip: 'Ajouter un document',
+          backgroundColor: AppColors.primaryDeep,
+          foregroundColor: Colors.white,
+          child: _working && !_importSheetOpen
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.add_rounded),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _NotebookCover(),
-            const SizedBox(height: 16),
             if (_error != null)
               CareEmpty(
                 icon: Icons.folder_off_outlined,
@@ -238,13 +249,6 @@ class _DocumentsPageState extends State<DocumentsPage> {
                 ),
               )
             else ...[
-              GradientButton(
-                text: 'Ajouter un document',
-                icon: Icons.add_rounded,
-                onPressed: _add,
-                isLoading: _working && !_importSheetOpen,
-              ),
-              const SizedBox(height: 16),
               TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
@@ -419,90 +423,11 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   ),
                 ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.phone_android_rounded,
-                    size: 15,
-                    color: AppColors.textMuted,
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      'Votre carnet est conservé sur ce téléphone.',
-                      style: AppDecor.t(11, c: AppColors.textMuted),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ],
         ),
       );
     },
-  );
-}
-
-class _NotebookCover extends StatelessWidget {
-  const _NotebookCover();
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(26),
-    child: Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(gradient: AppDecor.buttonGradient),
-      child: Stack(
-        children: [
-          Positioned(right: -42, top: -65, child: _circle(180)),
-          Positioned(right: -18, bottom: -105, child: _circle(175)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.folder_shared_outlined,
-                  color: Colors.white,
-                  size: 30,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Mon carnet de santé',
-                        style: AppDecor.t(
-                          17,
-                          w: FontWeight.w700,
-                          c: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Vos documents, votre histoire',
-                        style: AppDecor.t(
-                          12,
-                          c: Colors.white.withValues(alpha: .85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-  Widget _circle(double size) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      border: Border.all(color: Colors.white.withValues(alpha: .14)),
-    ),
   );
 }
 

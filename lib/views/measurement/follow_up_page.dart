@@ -329,16 +329,20 @@ Future<void> showMeasurementSheet(
   bool? pressure,
 }) async {
   final data = context.read<CareData>();
-  final result = await showModalBottomSheet<_MeasurementInput>(
+  final result = await showDialog<_MeasurementInput>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
-    backgroundColor: AppColors.scaffoldBackground,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    builder: (dialogContext) => Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 480,
+          maxHeight: MediaQuery.sizeOf(dialogContext).height * .88,
+        ),
+        child: _MeasurementForm(pressure: pressure),
+      ),
     ),
-    builder: (_) => _MeasurementForm(pressure: pressure),
   );
   if (result == null || !context.mounted) return;
   if (result.secondary == null) {
@@ -401,12 +405,7 @@ class _MeasurementFormState extends State<_MeasurementForm> {
       );
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: EdgeInsets.fromLTRB(
-      24,
-      24,
-      24,
-      24 + MediaQuery.viewInsetsOf(context).bottom,
-    ),
+    padding: const EdgeInsets.all(24),
     child: Form(
       key: _form,
       child: Column(

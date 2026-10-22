@@ -5,8 +5,10 @@ import 'page_header.dart';
 
 class CarePage extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Widget child;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
   final bool showBack;
   const CarePage({
     super.key,
@@ -14,10 +16,14 @@ class CarePage extends StatelessWidget {
     required this.subtitle,
     required this.child,
     this.showBack = true,
+    this.floatingActionButton,
+    this.floatingActionButtonLocation,
   });
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    floatingActionButton: floatingActionButton,
+    floatingActionButtonLocation: floatingActionButtonLocation,
     backgroundColor: AppColors.scaffoldBackground,
     body: SafeArea(
       child: SingleChildScrollView(

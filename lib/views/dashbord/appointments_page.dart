@@ -5,7 +5,6 @@ import '../../models/care_data.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import '../../widgets/care_page.dart';
-import '../../widgets/gradient_button.dart';
 
 class AppointmentsPage extends StatefulWidget {
   final bool showBack;
@@ -21,11 +20,41 @@ class AppointmentsPage extends StatefulWidget {
 }
 
 class _AppointmentsPageState extends State<AppointmentsPage> {
-  late bool _adding = widget.initialDoctor.isNotEmpty;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDoctor.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openAddDialog();
+      });
+    }
+  }
+
+  Future<void> _openAddDialog() => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: MediaQuery.sizeOf(dialogContext).height * .9,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          child: AppointmentAvailabilityForm(
+            doctor: widget.initialDoctor,
+            onSaved: _save,
+          ),
+        ),
+      ),
+    ),
+  );
 
   void _save(CareAppointment appointment) {
     context.read<CareData>().addAppointment(appointment);
-    setState(() => _adding = false);
+    Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Rendez-vous ajouté à votre agenda personnel.'),
@@ -41,29 +70,17 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       subtitle:
           'Organisez vos consultations et retrouvez vos prochains rendez-vous.',
       showBack: widget.showBack,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAddDialog,
+        tooltip: 'Ajouter un rendez-vous',
+        backgroundColor: AppColors.primaryDeep,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add_rounded),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       child: Column(
         children: [
-          if (_adding)
-            CareCard(
-              child: Column(
-                children: [
-                  AppointmentAvailabilityForm(
-                    doctor: widget.initialDoctor,
-                    onSaved: _save,
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => _adding = false),
-                    child: const Text('Annuler'),
-                  ),
-                ],
-              ),
-            )
-          else
-            GradientButton(
-              text: 'Ajouter un rendez-vous',
-              onPressed: () => setState(() => _adding = true),
-            ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
           if (appointments.isEmpty)
             const CareEmpty(
               icon: Icons.event_available_outlined,
