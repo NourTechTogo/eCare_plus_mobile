@@ -23,7 +23,7 @@ class _MainShellState extends State<MainShell> {
       children: const [
         HomePage(),
         AppointmentsPage(showBack: false),
-        ArticlesPage(),
+        ArticlesPage(showBack: false),
         SettingsPage(),
       ],
     ),

@@ -10,7 +10,8 @@ import '../../widgets/page_header.dart';
 const _editorialBlue = AppColors.primary;
 
 class ArticlesPage extends StatefulWidget {
-  const ArticlesPage({super.key});
+  final bool showBack;
+  const ArticlesPage({super.key, this.showBack = true});
   @override
   State<ArticlesPage> createState() => _ArticlesPageState();
 }
@@ -124,7 +125,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
                 PageHeader(
                   title: 'Articles',
                   subtitle: 'Un peu de lecture. Beaucoup pour vous.',
-                  showBack: false,
+                  showBack: widget.showBack,
                   action: SizedBox(
                     width: 48,
                     height: 48,
@@ -682,4 +683,13 @@ class _ArticleReaderState extends State<_ArticleReader> {
       ),
     );
   }
+}
+
+Future<void> openArticlesPage(BuildContext context) async {
+  await Navigator.push<void>(
+    context,
+    MaterialPageRoute<void>(
+      builder: (_) => const ArticlesPage(),
+    ),
+  );
 }

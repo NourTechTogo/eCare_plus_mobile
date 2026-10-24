@@ -13,7 +13,8 @@ import '../../widgets/doctor_message_button.dart';
 import '../messaging/doctor_contact_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final VoidCallback? onWelcomeTap;
+  const HomePage({super.key, this.onWelcomeTap});
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -72,7 +73,7 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 24),
                 const _SearchBar(),
                 const SizedBox(height: 22),
-                const _WelcomeCard(),
+                _WelcomeCard(onTap: onWelcomeTap),
                 const SizedBox(height: 24),
                 Text('Accès rapide', style: AppDecor.t(16, w: FontWeight.w700)),
                 const SizedBox(height: 10),
@@ -213,10 +214,11 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _WelcomeCard extends StatelessWidget {
-  const _WelcomeCard();
+  final VoidCallback? onTap;
+  const _WelcomeCard({this.onTap});
+
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
@@ -232,40 +234,54 @@ class _WelcomeCard extends StatelessWidget {
         ),
       ],
     ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        splashColor: Colors.white.withValues(alpha: .15),
+        highlightColor: Colors.white.withValues(alpha: .08),
+        onTap: onTap ?? () => Navigator.pushNamed(context, AppRoutes.articles),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
+          child: Row(
             children: [
-              Text(
-                'Bienvenue',
-                style: AppDecor.t(20, w: FontWeight.w700, c: Colors.white),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bienvenue',
+                      style: AppDecor.t(20, w: FontWeight.w700, c: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Votre suivi médical\ncommence ici.',
+                      style: AppDecor.t(13, c: const Color(0xFFE2EFFA), h: 1.5),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Votre suivi médical\ncommence ici.',
-                style: AppDecor.t(13, c: const Color(0xFFE2EFFA), h: 1.5),
+              const SizedBox(width: 12),
+              Container(
+                width: 80,
+                height: 92,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Image.asset(
+                  'assets/images/ecareImage1.png',
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        Container(
-          width: 80,
-          height: 92,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Image.asset(
-            'assets/images/ecareImage1.png',
-            fit: BoxFit.contain,
-            excludeFromSemantics: true,
-          ),
-        ),
-      ],
+      ),
     ),
   );
 }

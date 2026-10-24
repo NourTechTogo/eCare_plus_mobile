@@ -175,4 +175,21 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 3));
   });
+
+  testWidgets('Welcome card is clickable and redirects to articles page', (
+    tester,
+  ) async {
+    await openHome(tester);
+    expect(find.text('Bienvenue'), findsOneWidget);
+    await tester.tap(find.text('Bienvenue'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ArticlesPage), findsOneWidget);
+    expect(find.text('Articles'), findsOneWidget);
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 3));
+  });
 }

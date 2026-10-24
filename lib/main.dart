@@ -22,6 +22,7 @@ import 'views/profile/profile_page.dart';
 import 'views/dashbord/appointments_page.dart';
 import 'views/dashbord/documents_page.dart';
 import 'views/dashbord/doctors_page.dart';
+import 'views/dashbord/articles_page.dart';
 import 'views/notification/notifications_page.dart';
 import 'views/measurement/follow_up_page.dart';
 import 'views/measurement/glucose_follow_up_page.dart';
@@ -109,6 +110,7 @@ class ECarePlusApp extends StatelessWidget {
               const BloodPressureFollowUpPage(),
           AppRoutes.documents: (_) => const DocumentsPage(),
           AppRoutes.doctors: (_) => const DoctorsPage(),
+          AppRoutes.articles: (_) => const ArticlesPage(),
           AppRoutes.pageNotFound: (_) => const PageNotFoundPage(),
           AppRoutes.noConnection: (_) => const NoConnectionPage(),
           AppRoutes.privacyPolicy: (_) => const PrivacyPolicyPage(),
