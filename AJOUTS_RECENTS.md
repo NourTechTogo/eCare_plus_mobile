@@ -160,3 +160,14 @@ La référence fournie remplace la disposition précédente : vidéo plein écra
 - Recette contre l'API et LiveKit réels : affichage en 604/360/320 px, vidéo distante et locale avec périphériques de test du navigateur, passage appel → messages → appel et retour sans nouveau jeton de connexion ni requête de fin, menu historique, puis terminaison explicite ; création et terminaison audio. Aucune erreur JavaScript observée. Cette recette ne remplace pas une validation réseau Internet ni iOS.
 
 Le [processus corrigé](docs/MISE_A_JOUR_APPELS_MESSAGES.md) est détaillé dans la documentation. Les captures et journaux restent locaux. Le téléphone a ensuite autorisé le débogage USB : l'APK final a été réinstallé avec succès et l'application eCare+ Local a été lancée sur le profil principal du Samsung. Les tunnels API 8081 et LiveKit 7880/7881 sont rétablis ; l'aperçu 5184 est actualisé.
+
+## Agenda simplifié et notifications compactes avec gestes — 25 octobre 2026
+
+- Agenda : un seul bouton Ajouter une date dans le résumé ; suppression du bouton flottant redondant et texte d'état vide raccourci. L'agenda reste personnel à la session, sans réservation médicale confirmée.
+- Notifications : liste compacte inspirée de la référence fournie, recherche repliable, filtre de catégorie, date et indicateur de lecture, onglets Toutes / Non lues / Archivées.
+- Glisser à gauche : suppression via DELETE serveur ; glisser à droite : archivage (ou désarchivage depuis les archives). Annuler rétablit l'état approprié au serveur.
+- Toucher une ligne : marquer lue et griser la ligne, uniquement après confirmation du serveur. Détail complet accessible par appui long ou menu ; accès à la ressource liée conservé.
+- Boîte alimentée par les véritables notifications du compte, y compris celles liées aux alertes ; aucun mélange redondant avec les enregistrements cliniques d'alerte. Les ressources cliniques liées ne sont pas supprimées par ces gestes.
+- Petits écrans : masquage temporaire des filtres pendant la saisie avec clavier pour laisser les résultats accessibles. Les confirmations d'anciennes actions ne s'accumulent pas.
+- 151 tests Flutter réussis (2 réseau optionnels ignorés), analyse sans anomalie ; recette navigateur/API réussie en 604/360/320 px avec lecture, suppression/annulation, archives/désarchivage, recherche et détail.
+- Aperçu 5184 actualisé et APK debug compilé. Le Samsung n'est plus détecté par USB à cette étape : cette nouvelle version n'a pas été réinstallée sur le téléphone.

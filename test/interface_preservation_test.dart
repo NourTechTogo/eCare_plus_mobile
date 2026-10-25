@@ -67,12 +67,14 @@ void main() {
     tester,
   ) async {
     await mount(tester, const NotificationsPage());
+    await tester.tap(find.byTooltip('Rechercher'));
+    await tester.pumpAndSettle();
     expect(
       find.widgetWithText(TextField, 'Rechercher une notification'),
       findsOneWidget,
     );
     expect(find.text('Toutes'), findsOneWidget);
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.tap(find.byTooltip('Filtrer par catégorie'));
     await tester.pumpAndSettle();
     expect(find.text('Alertes'), findsWidgets);
     await tester.tap(find.text('Alertes').last);

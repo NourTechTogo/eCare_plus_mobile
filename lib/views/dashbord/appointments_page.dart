@@ -71,14 +71,6 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       title: 'Mes rendez-vous',
       subtitle: 'Retrouvez les dates de votre suivi.',
       showBack: widget.showBack,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddDialog,
-        tooltip: 'Ajouter un rendez-vous',
-        backgroundColor: AppColors.primaryDeep,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_rounded),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       child: Column(
         children: [
           CareSummary(
@@ -88,11 +80,14 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 '${appointments.length} rendez-vous dans votre agenda personnel.',
             footer: Align(
               alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
-                onPressed: _openAddDialog,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Ajouter une date'),
+              child: Tooltip(
+                message: 'Ajouter un rendez-vous',
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  onPressed: _openAddDialog,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Ajouter une date'),
+                ),
               ),
             ),
           ),
@@ -101,8 +96,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
             const CareEmpty(
               icon: Icons.event_available_outlined,
               title: 'Votre agenda est libre',
-              description:
-                  'Les exemples de créneaux servent uniquement à votre agenda personnel. Ils ne représentent pas les disponibilités de votre médecin affecté.',
+              description: 'Ajoutez une date pour organiser votre suivi.',
             )
           else
             for (final appointment in appointments) ...[
@@ -201,7 +195,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
             ],
           const SizedBox(height: 18),
           Text(
-            'Enregistré pour cette session. Une date ajoutée ici ne confirme pas une réservation auprès du médecin.',
+            'Agenda personnel pour cette session · Aucune réservation médicale confirmée.',
             textAlign: TextAlign.center,
             style: AppDecor.t(11, c: AppColors.textMuted, h: 1.6),
           ),
