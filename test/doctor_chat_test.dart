@@ -41,6 +41,10 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byTooltip('Envoyer').hitTestable(), findsOneWidget);
+        await tester.tap(find.byTooltip('Options de la conversation'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('À propos de la messagerie'));
+        await tester.pumpAndSettle();
         expect(
           find.textContaining('ne traite pas les urgences'),
           findsOneWidget,

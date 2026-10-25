@@ -20,11 +20,13 @@ import 'server_calls_page.dart';
 class ServerChatPage extends StatefulWidget {
   final String conversationId, doctorName;
   final CareDoctor? doctor;
+  final bool returnToCall;
   const ServerChatPage({
     super.key,
     required this.conversationId,
     required this.doctorName,
     this.doctor,
+    this.returnToCall = false,
   });
   @override
   State<ServerChatPage> createState() => _ServerChatPageState();
@@ -39,17 +41,23 @@ class _ServerChatPageState extends State<ServerChatPage>
   CareDoctor get doctor =>
       widget.doctor ?? CareDoctor.fromServer({'nom': widget.doctorName});
 
-  void openCalls([String? type]) => Navigator.push(
-    context,
-    MaterialPageRoute<void>(
-      builder: (_) => ServerCallsPage(
-        conversationId: widget.conversationId,
-        name: widget.doctorName,
-        doctor: doctor,
-        initialType: type,
+  void openCalls([String? type]) {
+    if (widget.returnToCall) {
+      Navigator.pop(context);
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ServerCallsPage(
+          conversationId: widget.conversationId,
+          name: widget.doctorName,
+          doctor: doctor,
+          initialType: type,
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   List<Map<String, dynamic>> messages = [];
   Timer? timer;
@@ -138,10 +146,21 @@ class _ServerChatPageState extends State<ServerChatPage>
         final c = '${a['envoyeLe']}'.compareTo('${b['envoyeLe']}');
         return c != 0 ? c : '${a['id']}'.compareTo('${b['id']}');
       });
+      final followLatest =
+          messages.isEmpty ||
+          !scroll.hasClients ||
+          scroll.position.extentAfter < 80;
       setState(() {
         messages = rows;
         error = null;
       });
+      if (followLatest && !searching) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && scroll.hasClients) {
+            scroll.jumpTo(scroll.position.maxScrollExtent);
+          }
+        });
+      }
       await api.request(
         'POST',
         '/mobile/conversations/${widget.conversationId}/lecture',
@@ -230,78 +249,86 @@ class _ServerChatPageState extends State<ServerChatPage>
 
   Widget bubble(Map<String, dynamic> message, String? userId) {
     final mine = message['expediteurId'] == userId;
-    final color = mine ? Colors.white : AppColors.textDark;
+    final color = mine ? AppColors.textDark : Colors.white;
     final date = DateTime.tryParse('${message['envoyeLe']}')?.toLocal();
     final time = date == null
         ? ''
         : '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * .78,
-        ),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 18),
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            color: mine ? AppColors.primary : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(16),
-              topRight: const Radius.circular(16),
-              bottomLeft: Radius.circular(mine ? 16 : 4),
-              bottomRight: Radius.circular(mine ? 4 : 16),
+    return Tooltip(
+      message: 'Appui long : notes liées',
+      child: GestureDetector(
+        onLongPress: () =>
+            showTargetNotes(context, 'MESSAGE', '${message['id']}'),
+        child: Align(
+          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: (MediaQuery.sizeOf(context).width * .78)
+                  .clamp(0, 440)
+                  .toDouble(),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if ('${message['contenu'] ?? ''}'.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${message['contenu']}',
-                    style: AppDecor.t(14, c: color, h: 1.5),
-                  ),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 7),
+              decoration: BoxDecoration(
+                color: mine ? Colors.white : const Color(0xFF228FA9),
+                border: Border.all(
+                  color: mine ? const Color(0xFFE0E8EE) : Colors.transparent,
                 ),
-              for (final raw in (message['piecesJointes'] as List? ?? []))
-                TextButton.icon(
-                  onPressed: () =>
-                      download(Map<String, dynamic>.from(raw as Map)),
-                  style: TextButton.styleFrom(foregroundColor: color),
-                  icon: const Icon(Icons.insert_drive_file_outlined),
-                  label: Text(
-                    '${raw['nomOriginal']}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(mine ? 16 : 4),
+                  bottomRight: Radius.circular(mine ? 4 : 16),
                 ),
-              Row(
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    child: Text(
-                      time,
-                      style: AppDecor.t(10, c: color.withValues(alpha: .75)),
+                  if ('${message['contenu'] ?? ''}'.isNotEmpty)
+                    Text(
+                      '${message['contenu']}',
+                      style: AppDecor.t(13, c: color, h: 1.45),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  if (mine)
-                    Icon(
-                      message['luLe'] == null ? Icons.check : Icons.done_all,
-                      size: 14,
-                      color: color,
+                  for (final raw in (message['piecesJointes'] as List? ?? []))
+                    TextButton.icon(
+                      onPressed: () =>
+                          download(Map<String, dynamic>.from(raw as Map)),
+                      style: TextButton.styleFrom(foregroundColor: color),
+                      icon: const Icon(Icons.insert_drive_file_outlined),
+                      label: Text(
+                        '${raw['nomOriginal']}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  IconButton(
-                    tooltip: 'Notes liées',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () =>
-                        showTargetNotes(context, 'MESSAGE', '${message['id']}'),
-                    icon: Icon(Icons.note_outlined, size: 17, color: color),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          time,
+                          style: AppDecor.t(
+                            10,
+                            c: color.withValues(alpha: .75),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      if (mine)
+                        Icon(
+                          message['luLe'] == null
+                              ? Icons.check
+                              : Icons.done_all,
+                          size: 14,
+                          color: color,
+                        ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -324,14 +351,16 @@ class _ServerChatPageState extends State<ServerChatPage>
         if (!didPop && showEmojis) setState(() => showEmojis = false);
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFEFF4F7),
         appBar: AppBar(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: const Color(0xFFF8FAFC),
+          foregroundColor: AppColors.primaryDeep,
+          elevation: 0,
+          scrolledUnderElevation: 0,
           leadingWidth: 64,
           leading: PageBackButton(
-            color: Colors.white,
-            backgroundColor: Colors.white.withAlpha(45),
+            color: AppColors.primaryDeep,
+            backgroundColor: Colors.white,
           ),
           titleSpacing: 0,
           title: InkWell(
@@ -346,7 +375,22 @@ class _ServerChatPageState extends State<ServerChatPage>
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundImage: AssetImage(doctor.imageAsset),
+                  backgroundColor: AppColors.primaryLighter,
+                  child: Text(
+                    widget.doctorName
+                        .trim()
+                        .split(RegExp(r'\s+'))
+                        .where((s) => s.isNotEmpty)
+                        .take(2)
+                        .map((s) => s[0])
+                        .join()
+                        .toUpperCase(),
+                    style: AppDecor.t(
+                      11,
+                      c: AppColors.primary,
+                      w: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -355,8 +399,8 @@ class _ServerChatPageState extends State<ServerChatPage>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -364,33 +408,40 @@ class _ServerChatPageState extends State<ServerChatPage>
             ),
           ),
           actions: [
-            PopupMenuButton<String>(
-              tooltip: 'Appeler',
-              color: Colors.white,
-              surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppColors.border),
+            if (widget.returnToCall)
+              IconButton(
+                tooltip: 'Revenir à l’appel',
+                onPressed: openCalls,
+                icon: const Icon(Icons.call_outlined),
+              )
+            else
+              PopupMenuButton<String>(
+                tooltip: 'Appeler',
+                color: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                icon: const Icon(Icons.call_outlined),
+                onSelected: openCalls,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'AUDIO',
+                    child: ChatMenuEntry(
+                      icon: Icons.call_outlined,
+                      title: 'Appel audio',
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'VIDEO',
+                    child: ChatMenuEntry(
+                      icon: Icons.videocam_outlined,
+                      title: 'Appel vidéo',
+                    ),
+                  ),
+                ],
               ),
-              icon: const Icon(Icons.call_outlined),
-              onSelected: openCalls,
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: 'AUDIO',
-                  child: ChatMenuEntry(
-                    icon: Icons.call_outlined,
-                    title: 'Appel audio',
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'VIDEO',
-                  child: ChatMenuEntry(
-                    icon: Icons.videocam_outlined,
-                    title: 'Appel vidéo',
-                  ),
-                ),
-              ],
-            ),
             PopupMenuButton<String>(
               tooltip: 'Options de la conversation',
               color: Colors.white,
@@ -410,8 +461,32 @@ class _ServerChatPageState extends State<ServerChatPage>
                   );
                 }
                 if (value == 'calls') openCalls();
+                if (value == 'info') {
+                  showDialog<void>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: const Text('À propos de la messagerie'),
+                      content: const Text(
+                        'Cette messagerie ne traite pas les urgences. En cas d’urgence, contactez les services d’urgence locaux.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(c),
+                          child: const Text('Fermer'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               },
               itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'info',
+                  child: ChatMenuEntry(
+                    icon: Icons.info_outline_rounded,
+                    title: 'À propos de la messagerie',
+                  ),
+                ),
                 PopupMenuItem(
                   value: 'contact',
                   child: ChatMenuEntry(
@@ -441,13 +516,43 @@ class _ServerChatPageState extends State<ServerChatPage>
           top: false,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                child: Text(
-                  'Cette messagerie ne traite pas les urgences. En cas d’urgence, contactez les services d’urgence locaux.',
-                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+              if (widget.returnToCall)
+                Material(
+                  color: AppColors.primary,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.call_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Revenir à l’appel',
+                              style: AppDecor.t(
+                                12,
+                                c: Colors.white,
+                                w: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
               if (searching)
                 Padding(
                   padding: const EdgeInsets.all(12),
@@ -501,7 +606,41 @@ class _ServerChatPageState extends State<ServerChatPage>
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         itemCount: filtered.length,
-                        itemBuilder: (_, i) => bubble(filtered[i], id),
+                        itemBuilder: (_, i) {
+                          final current = DateTime.tryParse(
+                            '${filtered[i]['envoyeLe']}',
+                          )?.toLocal();
+                          final previous = i == 0
+                              ? null
+                              : DateTime.tryParse(
+                                  '${filtered[i - 1]['envoyeLe']}',
+                                )?.toLocal();
+                          final newDay =
+                              current != null &&
+                              (previous == null ||
+                                  current.year != previous.year ||
+                                  current.month != previous.month ||
+                                  current.day != previous.day);
+                          return Column(
+                            children: [
+                              if (newDay)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8,
+                                    bottom: 18,
+                                  ),
+                                  child: Text(
+                                    '${current.day.toString().padLeft(2, '0')}/${current.month.toString().padLeft(2, '0')}/${current.year}',
+                                    style: AppDecor.t(
+                                      10,
+                                      c: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              bubble(filtered[i], id),
+                            ],
+                          );
+                        },
                       ),
               ),
               if (attachments.isNotEmpty)
@@ -542,7 +681,7 @@ class _ServerChatPageState extends State<ServerChatPage>
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0F4F8),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(28),
                         ),
                         child: Row(
@@ -617,7 +756,7 @@ class _ServerChatPageState extends State<ServerChatPage>
                       style: IconButton.styleFrom(
                         minimumSize: const Size(52, 52),
                         shape: const CircleBorder(),
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: const Color(0xFF228FA9),
                         foregroundColor: Colors.white,
                       ),
                       icon: sending

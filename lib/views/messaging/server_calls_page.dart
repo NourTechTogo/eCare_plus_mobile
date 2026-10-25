@@ -7,11 +7,12 @@ import '../../data/doctor_catalog.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import 'package:livekit_client/livekit_client.dart'
-    show VideoTrackRenderer, AudioManager;
+    show VideoTrackRenderer, VideoViewFit, AudioManager;
 import 'doctor_call_page.dart';
 import 'call_screen_connection.dart';
 import '../../widgets/target_notes.dart';
 import 'live_call_room.dart';
+import 'server_chat_page.dart';
 
 class ServerCallsPage extends StatefulWidget {
   final String conversationId, name;
@@ -207,6 +208,27 @@ class _ServerCallsPageState extends State<ServerCallsPage>
     );
   }
 
+  bool showingMessages = false;
+  Future<void> openMessages() async {
+    if (showingMessages) return;
+    showingMessages = true;
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => ServerChatPage(
+            conversationId: widget.conversationId,
+            doctorName: widget.name,
+            doctor: widget.doctor,
+            returnToCall: true,
+          ),
+        ),
+      );
+    } finally {
+      showingMessages = false;
+    }
+  }
+
   Widget screen(Map<String, dynamic>? call, [LiveCallView? media]) {
     final incoming =
         call?['statut'] == 'EN_ATTENTE' &&
@@ -227,10 +249,16 @@ class _ServerCallsPageState extends State<ServerCallsPage>
       camera: media?.room?.cameraEnabled ?? false,
       speaker: speaker,
       remoteVideo: media?.room?.videos.isNotEmpty == true
-          ? VideoTrackRenderer(media!.room!.videos.first)
+          ? VideoTrackRenderer(
+              media!.room!.videos.first,
+              fit: VideoViewFit.cover,
+            )
           : null,
       localVideo: media?.room?.localVideo != null
-          ? VideoTrackRenderer(media!.room!.localVideo!)
+          ? VideoTrackRenderer(
+              media!.room!.localVideo!,
+              fit: VideoViewFit.cover,
+            )
           : null,
       onMicrophone: connected ? () => media!.toggle(false) : null,
       onCamera: connected ? () => media!.toggle(true) : null,
@@ -252,7 +280,12 @@ class _ServerCallsPageState extends State<ServerCallsPage>
           : call == null
           ? () => Navigator.maybePop(context)
           : () => action(call, 'fin'),
-      onMessages: () => Navigator.maybePop(context),
+      onMessages: openMessages,
+      onHistory: history,
+      onRefresh: load,
+      onNotes: call == null
+          ? null
+          : () => showTargetNotes(context, 'APPEL', '${call['id']}'),
       actions: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -271,13 +304,15 @@ class _ServerCallsPageState extends State<ServerCallsPage>
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilledButton(
+                FilledButton.icon(
                   onPressed: busy ? null : () => create('AUDIO'),
-                  child: const Text('Appel audio'),
+                  icon: const Icon(Icons.call_outlined, size: 20),
+                  label: const Text('Appel audio'),
                 ),
-                FilledButton(
+                FilledButton.icon(
                   onPressed: busy ? null : () => create('VIDEO'),
-                  child: const Text('Appel vidéo'),
+                  icon: const Icon(Icons.videocam_outlined, size: 20),
+                  label: const Text('Appel vidéo'),
                 ),
               ],
             ),
@@ -320,35 +355,19 @@ class _ServerCallsPageState extends State<ServerCallsPage>
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
-          Wrap(
-            alignment: WrapAlignment.center,
-            children: [
-              TextButton.icon(
-                onPressed: history,
-                icon: Icon(Icons.history_rounded, color: foreground),
-                label: Text('Historique', style: TextStyle(color: foreground)),
-              ),
-              IconButton(
-                tooltip: 'Actualiser',
-                onPressed: load,
-                icon: Icon(Icons.refresh_rounded, color: foreground),
-              ),
-              if (call != null)
-                IconButton(
-                  tooltip: 'Notes liées',
-                  onPressed: () =>
-                      showTargetNotes(context, 'APPEL', '${call['id']}'),
-                  icon: Icon(Icons.note_outlined, color: foreground),
-                ),
-            ],
-          ),
         ],
       ),
     );
-    return DoctorCallPage(
-      doctor: widget.doctor ?? CareDoctor.fromServer({'nom': widget.name}),
-      video: video,
-      connection: state,
+    return PopScope(
+      canPop: call == null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) openMessages();
+      },
+      child: DoctorCallPage(
+        doctor: widget.doctor ?? CareDoctor.fromServer({'nom': widget.name}),
+        video: video,
+        connection: state,
+      ),
     );
   }
 

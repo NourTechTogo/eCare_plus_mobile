@@ -11,7 +11,10 @@ class CallScreenConnection {
       onCamera,
       onVideo,
       onEnd,
-      onMessages;
+      onMessages,
+      onHistory,
+      onRefresh,
+      onNotes;
   const CallScreenConnection({
     required this.status,
     required this.actions,
@@ -27,5 +30,8 @@ class CallScreenConnection {
     this.onVideo,
     this.onEnd,
     this.onMessages,
+    this.onHistory,
+    this.onRefresh,
+    this.onNotes,
   });
 }

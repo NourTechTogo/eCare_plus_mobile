@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:ecare_plus_mobile/services/api_session.dart';
-import 'package:ecare_plus_mobile/utils/app_colors.dart';
 import 'package:ecare_plus_mobile/views/dashbord/doctors_page.dart';
 import 'package:ecare_plus_mobile/views/messaging/doctor_call_page.dart';
 import 'package:ecare_plus_mobile/views/messaging/server_calls_page.dart';
@@ -111,7 +110,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Server conversation retains original blue header and composer', (
+  testWidgets('Reference conversation keeps composer and call actions', (
     tester,
   ) async {
     final session = await signedInSession();
@@ -126,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.widget<AppBar>(find.byType(AppBar)).backgroundColor,
-      AppColors.primary,
+      const Color(0xFFF8FAFC),
     );
     expect(find.byTooltip('Appeler'), findsOneWidget);
     expect(find.byTooltip('Choisir un emoji'), findsOneWidget);

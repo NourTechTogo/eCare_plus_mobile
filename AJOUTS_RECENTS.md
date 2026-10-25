@@ -147,3 +147,16 @@ Les fournisseurs de notifications et LiveKit ne sont pas encore choisis/configur
 - Publication séparée sur `ecare_mobile_stable` dans le dépôt mobile. Les contrats, bilans et exemples de configuration sont copiés dans ce dépôt ; aucun dossier backend/frontend, secret, base privée ni fichier compilé n'est inclus.
 
 La validation des médias physiques et les limites iOS/Internet/push sont décrites dans [docs/VALIDATION.md](docs/VALIDATION.md). Les paragraphes historiques « services à configurer » décrivent l'état de leurs étapes ; LiveKit local a depuis été configuré et testé.
+
+## Corrections des annotations appels et conversation — 25 octobre 2026
+
+La référence fournie remplace la disposition précédente : vidéo plein écran avec aperçu local superposé, cinq commandes rondes dans une barre compacte, conversation claire avec bulles ajustées à leur contenu et séparation des jours. Aucun portrait fictif n'est injecté à la place d'un flux distant absent.
+
+- Historique, actualisation et notes de l'appel déplacés dans Options de l’appel (trois points).
+- Correction de la coupure du média : Messages ouvre la conversation au-dessus de la route d'appel au lieu de fermer le propriétaire LiveCallRoom. Le bandeau Revenir à l’appel retrouve cette même session ; le bouton téléphone de cette conversation retrouve l'appel existant.
+- Le retour depuis un appel actif ouvre aussi cette conversation en conservant le média. La fin explicite arrête toujours localement le média avant la confirmation serveur.
+- Conversation : en-tête clair, composeur compact turquoise, bulles entrantes turquoise/sortantes blanches, heures et dates réelles. Les notes d'un message sont accessibles par appui long ; l'information sur les urgences est déplacée dans le menu de conversation.
+- Analyse Flutter sans anomalie et 147 tests réussis (2 réseau optionnels ignorés). Compilations web et APK debug réussies.
+- Recette contre l'API et LiveKit réels : affichage en 604/360/320 px, vidéo distante et locale avec périphériques de test du navigateur, passage appel → messages → appel et retour sans nouveau jeton de connexion ni requête de fin, menu historique, puis terminaison explicite ; création et terminaison audio. Aucune erreur JavaScript observée. Cette recette ne remplace pas une validation réseau Internet ni iOS.
+
+Le [processus corrigé](docs/MISE_A_JOUR_APPELS_MESSAGES.md) est détaillé dans la documentation. Les captures et journaux restent locaux. Le téléphone a ensuite autorisé le débogage USB : l'APK final a été réinstallé avec succès et l'application eCare+ Local a été lancée sur le profil principal du Samsung. Les tunnels API 8081 et LiveKit 7880/7881 sont rétablis ; l'aperçu 5184 est actualisé.
