@@ -1,126 +1,197 @@
 import 'package:flutter/material.dart';
-import '../../utils/app_colors.dart';
-import '../../utils/app_text_styles.dart';
-import '../../routes/app_routes.dart';
+import 'package:provider/provider.dart';
+import '../../services/api_session.dart';
 import '../../widgets/auth_layout.dart';
 import '../../widgets/auth_field.dart';
 import '../../widgets/gradient_button.dart';
+import '../../utils/app_colors.dart';
+import '../../utils/app_text_styles.dart';
+import '../../utils/password_rules.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
-
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _controller = TextEditingController();
-  bool _loading = false;
-  bool _sent = false;
-
+  final email = TextEditingController(),
+      code = TextEditingController(),
+      password = TextEditingController();
+  int step = 0;
+  bool busy = false;
+  String? token, error;
   @override
   void dispose() {
-    _controller.dispose();
+    email.dispose();
+    code.dispose();
+    password.dispose();
     super.dispose();
   }
 
-  Future<void> _send() async {
-    FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    // TODO: appel du service de réinitialisation
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
+  Future<void> submit() async {
+    if (step == 2) {
+      final validation = validateNewPassword(password.text);
+      if (validation != null) {
+        setState(() => error = validation);
+        return;
+      }
+    }
     setState(() {
-      _loading = false;
-      _sent = true;
+      busy = true;
+      error = null;
     });
+    try {
+      final api = context.read<ApiSession>();
+      if (step == 0) {
+        await api.request(
+          'POST',
+          '/auth/mot-de-passe/otp',
+          public: true,
+          body: {'email': email.text.trim()},
+        );
+      } else if (step == 1) {
+        final r = await api.request(
+          'POST',
+          '/auth/mot-de-passe/otp/verifier',
+          public: true,
+          body: {'email': email.text.trim(), 'code': code.text.trim()},
+        );
+        token = r['jetonReinitialisation'] as String;
+      } else {
+        await api.request(
+          'POST',
+          '/auth/mot-de-passe/reinitialiser',
+          public: true,
+          body: {'jeton': token, 'nouveauMotDePasse': password.text},
+        );
+      }
+      if (mounted) setState(() => step++);
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
-
-  void _toLogin() =>
-      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
 
   @override
-  Widget build(BuildContext context) {
-    return AuthLayout(
-      title: 'Mot de passe\noublié ?',
-      subtitle: 'Pas de panique, nous vous aidons à retrouver l\'accès.',
-      headerHeight: 280,
-      showEcg: false,
-      footer: _sent
-          ? null
-          : TextButton.icon(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(
-                Icons.arrow_back_rounded,
-                size: 22,
-                color: AppColors.primary,
-              ),
-              label: Text(
-                'Retour à la connexion',
-                style: AppTextStyles.link.copyWith(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                ),
+  Widget build(BuildContext context) => AuthLayout(
+    title: 'Mot de passe\noublié ?',
+    subtitle: 'Pas de panique, nous vous aidons à retrouver l’accès.',
+    headerHeight: 280,
+    showEcg: false,
+    footer: TextButton.icon(
+      onPressed: () => Navigator.pop(context),
+      icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+      label: Text(
+        'Retour à la connexion',
+        style: AppTextStyles.link.copyWith(
+          fontSize: 14.5,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+    child: AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      child: Column(
+        key: ValueKey(step),
+        children: [
+          _RoundIcon(
+            icon: step == 3
+                ? Icons.check_circle_outline_rounded
+                : step == 0
+                ? Icons.lock_reset_rounded
+                : Icons.mark_email_read_rounded,
+            color: step == 3 ? AppColors.success : AppColors.primary,
+            bg: step == 3 ? const Color(0xFFDCFCE7) : AppColors.primaryLighter,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            step == 3
+                ? 'Mot de passe modifié !'
+                : step == 0
+                ? 'Réinitialiser votre mot de passe'
+                : step == 1
+                ? 'Code de vérification'
+                : 'Nouveau mot de passe',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.heading1.copyWith(
+              fontSize: 22,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            step == 0
+                ? 'Entrez votre e-mail. Nous vous enverrons un code pour modifier votre mot de passe.'
+                : step == 1
+                ? 'Si ce compte existe, un code a été envoyé par e-mail.'
+                : step == 2
+                ? newPasswordHint
+                : 'Vous pouvez maintenant vous reconnecter.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body.copyWith(
+              fontSize: 14,
+              height: 1.55,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 22),
+          if (step == 0)
+            AuthField(
+              label: 'E-mail',
+              controller: email,
+              icon: Icons.mail_outline_rounded,
+              keyboardType: TextInputType.emailAddress,
+            ),
+          if (step == 1) ...[
+            AuthField(
+              label: 'Code de vérification',
+              controller: code,
+              icon: Icons.pin_outlined,
+              keyboardType: TextInputType.number,
+            ),
+            TextButton(
+              onPressed: busy ? null : () => setState(() => step = 0),
+              child: const Text('Renvoyer un code'),
+            ),
+          ],
+          if (step == 2)
+            AuthField(
+              label: 'Nouveau mot de passe',
+              controller: password,
+              icon: Icons.lock_outline_rounded,
+              obscureText: true,
+            ),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        child: _sent
-            ? _SentView(
-                key: const ValueKey('sent'),
-                target: _controller.text.trim(),
-                onBack: _toLogin,
-              )
-            : Form(
-                key: _formKey,
-                child: Column(
-                  key: const ValueKey('form'),
-                  children: [
-                    Image.asset(
-                      'assets/images/ecareImage4.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Entrez votre Email. Nous vous enverrons un code pour modifier votre mot de passe.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 14,
-                        height: 1.55,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    AuthField(
-                      label: 'Adresse e-mail',
-                      controller: _controller,
-                      icon: Icons.mail_outline_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      validator: (v) {
-                        final s = v?.trim() ?? '';
-                        if (s.isEmpty) return 'Ce champ est obligatoire';
-                        return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)
-                            ? null
-                            : 'E-mail invalide';
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    GradientButton(
-                      text: 'Envoyer les instructions',
-                      onPressed: _send,
-                      isLoading: _loading,
-                    ),
-                  ],
-                ),
-              ),
+          const SizedBox(height: 24),
+          if (step < 3)
+            GradientButton(
+              text: step == 0
+                  ? 'Envoyer le code'
+                  : step == 1
+                  ? 'Vérifier le code'
+                  : 'Enregistrer le mot de passe',
+              onPressed: submit,
+              isLoading: busy,
+            )
+          else
+            GradientButton(
+              text: 'Se connecter',
+              onPressed: () => Navigator.pop(context),
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _RoundIcon extends StatelessWidget {
@@ -142,60 +213,6 @@ class _RoundIcon extends StatelessWidget {
         decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
         child: Icon(icon, color: color, size: 38),
       ),
-    );
-  }
-}
-
-class _SentView extends StatelessWidget {
-  final String target;
-  final VoidCallback onBack;
-  const _SentView({super.key, required this.target, required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _RoundIcon(
-          icon: Icons.mark_email_read_rounded,
-          color: AppColors.success,
-          bg: Color(0xFFDCFCE7),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'E-mail envoyé !',
-          style: AppTextStyles.heading1.copyWith(
-            fontSize: 22,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text.rich(
-          TextSpan(
-            text: 'Les instructions ont été envoyées à\n',
-            style: AppTextStyles.body.copyWith(
-              fontSize: 14,
-              height: 1.6,
-              color: AppColors.textMuted,
-            ),
-            children: [
-              TextSpan(
-                text: target,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-              ),
-              const TextSpan(
-                text: '\n\nPensez à vérifier vos courriers indésirables.',
-              ),
-            ],
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 26),
-        GradientButton(text: 'Retour à la connexion', onPressed: onBack),
-      ],
     );
   }
 }

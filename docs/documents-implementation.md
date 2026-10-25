@@ -1,3 +1,5 @@
+> Document conservé des étapes précédentes. Voir [la validation de livraison](../VALIDATION.md) pour les résultats et limites à la publication. Les fichiers `.maintenance` cités ne sont pas inclus.
+
 # Carnet de documents médicaux
 
 Implemented approved notebook concept with local persistent copies, category and pathology filters, text search, date sorting, and file import/open/export/removal. Profile conditions and notebook personalization use the same persisted condition set. Documents may concern both conditions without duplicate storage. Supported files: PDF, JPG/JPEG, PNG, DOC/DOCX, at most 20 MiB. No backend or clinician transmission.

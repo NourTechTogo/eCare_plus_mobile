@@ -1,3 +1,5 @@
+import 'support/api_fixture.dart';
+import 'package:ecare_plus_mobile/services/api_session.dart';
 import 'package:ecare_plus_mobile/services/profile_photo_service.dart';
 import 'package:ecare_plus_mobile/models/care_data.dart';
 import 'package:ecare_plus_mobile/views/profile/profile_page.dart';
@@ -51,9 +53,18 @@ void main() {
     CareData data,
     ImagePicker picker,
   ) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    final session = await signedInSession();
+
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: data,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<CareData>.value(value: data),
+          ChangeNotifierProvider<ApiSession>(
+            lazy: false,
+            create: (_) => session,
+          ),
+        ],
         child: MaterialApp(home: ProfilePage(imagePicker: picker)),
       ),
     );

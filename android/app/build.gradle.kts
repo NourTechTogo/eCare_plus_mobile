@@ -31,6 +31,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Keep the local preview separate from an already installed app.
+            applicationIdSuffix = ".local"
+            versionNameSuffix = "-local"
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

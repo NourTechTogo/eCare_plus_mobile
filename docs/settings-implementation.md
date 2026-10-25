@@ -1,3 +1,5 @@
+> Document conservé des étapes précédentes. Voir [la validation de livraison](../VALIDATION.md) pour les résultats et limites à la publication. Les fichiers `.maintenance` cités ne sont pas inclus.
+
 # Paramètres et page eCare+
 
 ## Direction retenue

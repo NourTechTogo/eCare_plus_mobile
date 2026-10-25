@@ -6,6 +6,7 @@ import '../views/dashbord/home_page.dart';
 import '../views/dashbord/appointments_page.dart';
 import '../views/dashbord/articles_page.dart';
 import '../views/dashbord/settings_page.dart';
+import 'incoming_call_banner.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -18,13 +19,20 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.scaffoldBackground,
-    body: IndexedStack(
-      index: _selected,
-      children: const [
-        HomePage(),
-        AppointmentsPage(showBack: false),
-        ArticlesPage(showBack: false),
-        SettingsPage(),
+    body: Column(
+      children: [
+        const IncomingCallBanner(),
+        Expanded(
+          child: IndexedStack(
+            index: _selected,
+            children: const [
+              HomePage(),
+              AppointmentsPage(showBack: false),
+              ArticlesPage(),
+              SettingsPage(),
+            ],
+          ),
+        ),
       ],
     ),
     bottomNavigationBar: RaisedNavigationBar(

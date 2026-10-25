@@ -44,7 +44,7 @@ class UnderlineTextField extends StatelessWidget {
                       style: AppTextStyles.label.copyWith(
                         color: AppColors.required,
                       ),
-                    )
+                    ),
                   ]
                 : [],
           ),
@@ -62,9 +62,7 @@ class UnderlineTextField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: AppTextStyles.body.copyWith(
-              color: AppColors.textHint,
-            ),
+            hintStyle: AppTextStyles.body.copyWith(color: AppColors.textHint),
             suffixIcon: suffixIcon,
             prefixIcon: prefixIcon,
             contentPadding: const EdgeInsets.symmetric(vertical: 10),

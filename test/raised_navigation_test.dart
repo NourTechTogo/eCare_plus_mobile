@@ -1,9 +1,10 @@
+import 'support/care_fixture.dart';
 import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import 'package:ecare_plus_mobile/models/care_data.dart';
 import 'package:ecare_plus_mobile/main.dart';
 import 'package:ecare_plus_mobile/widgets/raised_navigation_bar.dart';
-import 'package:ecare_plus_mobile/views/onbording/splash_screen.dart';
+
 import 'package:ecare_plus_mobile/views/dashbord/articles_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,10 +13,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
   Future<void> open(WidgetTester tester) async {
-    await tester.pumpWidget(const ECarePlusApp());
-    Navigator.of(
-      tester.element(find.byType(SplashScreen)),
-    ).pushReplacementNamed('/home');
+    final data = CareData();
+    final session = await careSession(data);
+    await tester.pumpWidget(ECarePlusApp(initialData: data, session: session));
     await tester.pumpAndSettle();
   }
 

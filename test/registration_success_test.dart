@@ -1,3 +1,4 @@
+import 'support/api_fixture.dart';
 import 'package:ecare_plus_mobile/main.dart';
 import 'package:ecare_plus_mobile/views/onbording/splash_screen.dart';
 import 'package:ecare_plus_mobile/views/auth/registration_success_page.dart';
@@ -7,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ecare_plus_mobile/services/registration_welcome_service.dart';
 
 Future<void> openSuccess(WidgetTester tester, {bool first = true}) async {
-  await tester.pumpWidget(const ECarePlusApp());
+  await tester.pumpWidget(ECarePlusApp(session: testSession()));
   Navigator.of(
     tester.element(find.byType(SplashScreen)),
   ).pushReplacementNamed('/registration-success', arguments: first);

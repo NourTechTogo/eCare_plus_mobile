@@ -5,6 +5,7 @@ import '../../models/care_data.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import '../../widgets/care_page.dart';
+import '../../widgets/care_components.dart';
 
 class AppointmentsPage extends StatefulWidget {
   final bool showBack;
@@ -64,11 +65,11 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final appointments = context.watch<CareData>().appointments;
+    final appointments = [...context.watch<CareData>().appointments]
+      ..sort((a, b) => a.date.compareTo(b.date));
     return CarePage(
       title: 'Mes rendez-vous',
-      subtitle:
-          'Organisez vos consultations et retrouvez vos prochains rendez-vous.',
+      subtitle: 'Retrouvez les dates de votre suivi.',
       showBack: widget.showBack,
       floatingActionButton: FloatingActionButton(
         onPressed: _openAddDialog,
@@ -80,13 +81,28 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       child: Column(
         children: [
-          const SizedBox(height: 8),
+          CareSummary(
+            icon: Icons.calendar_month_rounded,
+            title: 'Votre agenda santé',
+            description:
+                '${appointments.length} rendez-vous dans votre agenda personnel.',
+            footer: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                onPressed: _openAddDialog,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Ajouter une date'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           if (appointments.isEmpty)
             const CareEmpty(
               icon: Icons.event_available_outlined,
               title: 'Votre agenda est libre',
               description:
-                  'Choisissez votre médecin et un créneau disponible pour planifier votre consultation.',
+                  'Les exemples de créneaux servent uniquement à votre agenda personnel. Ils ne représentent pas les disponibilités de votre médecin affecté.',
             )
           else
             for (final appointment in appointments) ...[
@@ -96,15 +112,52 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                   children: [
                     Row(
                       children: [
-                        const Icon(
-                          Icons.calendar_month_rounded,
-                          color: AppColors.primary,
+                        Container(
+                          width: 54,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLighter,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '${appointment.date.day}',
+                                style: AppDecor.t(
+                                  22,
+                                  c: AppColors.primary,
+                                  w: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                const [
+                                  'JAN',
+                                  'FÉV',
+                                  'MAR',
+                                  'AVR',
+                                  'MAI',
+                                  'JUIN',
+                                  'JUIL',
+                                  'AOÛT',
+                                  'SEP',
+                                  'OCT',
+                                  'NOV',
+                                  'DÉC',
+                                ][appointment.date.month - 1],
+                                style: AppDecor.t(
+                                  10,
+                                  c: AppColors.primary,
+                                  w: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            appointment.doctor,
-                            style: AppDecor.t(15, w: FontWeight.w700),
+                            '${appointment.doctor}\n${careTime(appointment.date)} · Agenda personnel',
+                            style: AppDecor.t(14, w: FontWeight.w600, h: 1.8),
                           ),
                         ),
                         IconButton(
@@ -141,15 +194,6 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${careDate(appointment.date)} · ${careTime(appointment.date)}',
-                      style: AppDecor.t(
-                        14,
-                        c: AppColors.primary,
-                        w: FontWeight.w600,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -157,8 +201,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
             ],
           const SizedBox(height: 18),
           Text(
-            'Agenda personnel · Les entrées restent disponibles pendant cette session. '
-            'L’ajout ne réserve pas de consultation auprès du médecin.',
+            'Enregistré pour cette session. Une date ajoutée ici ne confirme pas une réservation auprès du médecin.',
             textAlign: TextAlign.center,
             style: AppDecor.t(11, c: AppColors.textMuted, h: 1.6),
           ),

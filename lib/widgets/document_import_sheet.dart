@@ -98,6 +98,13 @@ class _DocumentImportSheetState extends State<DocumentImportSheet> {
                 ),
               ),
               const SizedBox(height: 6),
+              if (widget.library.remote)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Ce document sera transmis à votre dossier et accessible aux professionnels habilités.',
+                  ),
+                ),
               Text(
                 widget.file.name,
                 style: AppDecor.t(12, c: AppColors.textMuted),
@@ -160,35 +167,37 @@ class _DocumentImportSheetState extends State<DocumentImportSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Concerne', style: AppDecor.t(14, w: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text(
-                'Sélectionnez les suivis concernés, ou laissez vide pour Général.',
-                style: AppDecor.t(12, c: AppColors.textMuted),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final condition
-                      in (widget.library.conditions.isEmpty
-                          ? MedicalCondition.values
-                          : widget.library.conditions))
-                    FilterChip(
-                      label: Text(condition.label),
-                      selected: _conditions.contains(condition),
-                      onSelected: _saving
-                          ? null
-                          : (selected) => setState(() {
-                              if (selected) {
-                                _conditions.add(condition);
-                              } else {
-                                _conditions.remove(condition);
-                              }
-                            }),
-                    ),
-                ],
-              ),
+              if (!widget.library.remote) ...[
+                Text('Concerne', style: AppDecor.t(14, w: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  'Sélectionnez les suivis concernés, ou laissez vide pour Général.',
+                  style: AppDecor.t(12, c: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final condition
+                        in (widget.library.conditions.isEmpty
+                            ? MedicalCondition.values
+                            : widget.library.conditions))
+                      FilterChip(
+                        label: Text(condition.label),
+                        selected: _conditions.contains(condition),
+                        onSelected: _saving
+                            ? null
+                            : (selected) => setState(() {
+                                if (selected) {
+                                  _conditions.add(condition);
+                                } else {
+                                  _conditions.remove(condition);
+                                }
+                              }),
+                      ),
+                  ],
+                ),
+              ],
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -206,7 +215,7 @@ class _DocumentImportSheetState extends State<DocumentImportSheet> {
               const SizedBox(height: 10),
               Center(
                 child: Text(
-                  'PDF, JPG, PNG ou Word · 20 Mo maximum',
+                  'PDF, JPG ou PNG · 5 Mo maximum',
                   style: AppDecor.t(11, c: AppColors.textMuted),
                 ),
               ),

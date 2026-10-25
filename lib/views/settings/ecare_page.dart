@@ -86,7 +86,7 @@ class ECarePage extends StatelessWidget {
             _HelpItem(
               title: 'Personnaliser mes suivis',
               text:
-                  'Dans votre profil, sélectionnez Diabète, Hypertension ou les deux. Le carnet adapte ses filtres à vos choix. Un document peut concerner plusieurs suivis sans être enregistré deux fois.',
+                  'Complétez les informations de votre profil et vérifiez votre rattachement à un professionnel. Le suivi clinique reste soumis aux droits du dossier et à votre consentement. Les traitements prescrits et leurs horaires sont consultables depuis l’accueil ou les paramètres.',
               action: 'Modifier mon profil',
               onTap: () => Navigator.push(
                 context,
@@ -96,14 +96,14 @@ class ECarePage extends StatelessWidget {
             _HelpItem(
               title: 'Ajouter et retrouver un document',
               text:
-                  'Votre carnet accepte les PDF, images et fichiers Word jusqu’à 20 Mo. Choisissez un fichier, donnez-lui un nom et classez-le. La recherche et les filtres vous permettent de le retrouver ; son menu propose l’ouverture, le téléchargement et le retrait.',
+                  'Le carnet serveur accepte les PDF, JPG et PNG jusqu’à 5 Mo. Les fichiers transmis sont accessibles aux professionnels habilités de votre dossier. Choisissez un fichier, donnez-lui un nom et un type. Le menu permet le téléchargement privé et le retrait. Les anciennes archives locales restent conservées dans Mes données et leur transfert est volontaire.',
               action: 'Ouvrir mon carnet',
               onTap: () => Navigator.pushNamed(context, AppRoutes.documents),
             ),
             _HelpItem(
               title: 'Comprendre mes rappels',
               text:
-                  'Les rappels de rendez-vous affichent les entrées de votre agenda dans Mes notifications. Vous pouvez les désactiver dans les paramètres. Ils ne déclenchent pas encore d’alarme ou de notification système lorsque l’application est fermée.',
+                  'Les notifications affichées proviennent du serveur. Les préférences de l’agenda restent locales ; elles ne programment pas d’alarme ni de notification système lorsque l’application est fermée. Lire une notification ne confirme pas une prise de médicament.',
               action: 'Voir mes notifications',
               onTap: () =>
                   Navigator.pushNamed(context, AppRoutes.notifications),

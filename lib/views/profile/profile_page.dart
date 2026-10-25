@@ -1,311 +1,395 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../models/care_data.dart';
-import '../../models/medical_document.dart';
-import '../../services/document_library.dart';
-import '../../services/profile_photo_service.dart';
-import '../../widgets/patient_avatar.dart';
+import '../../services/api_session.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import '../../widgets/gradient_button.dart';
-import '../../routes/app_routes.dart';
 import '../../widgets/page_header.dart';
+import '../../models/care_data.dart';
+import '../../services/profile_photo_service.dart';
+import '../../widgets/patient_avatar.dart';
+import 'package:flutter/services.dart';
 
 class ProfilePage extends StatefulWidget {
-  /// true = première connexion : après "Enregistrer" on va au dashboard.
   final bool firstTime;
   final ImagePicker? imagePicker;
   const ProfilePage({super.key, this.firstTime = false, this.imagePicker});
-
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final _formKey = GlobalKey<FormState>();
-  final _nom = TextEditingController();
-  final _prenom = TextEditingController();
-  final _poids = TextEditingController();
-  final _taille = TextEditingController();
-  String? _sexe;
-  String? _groupe;
-  bool _loading = false;
-  bool _pickingPhoto = false;
-  Set<MedicalCondition> _conditions = {};
-  bool _conditionsChanged = false;
-  late final DocumentLibrary _documents =
-      context.read<DocumentLibrary?>() ?? DocumentLibrary.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadConditions();
-  }
-
-  Future<void> _loadConditions() async {
+  Future<void> choosePhoto() async {
+    final session = context.read<ApiSession>();
+    final generation = session.generation;
     try {
-      await _documents.load();
-      if (mounted && !_conditionsChanged) {
-        setState(() => _conditions = Set.of(_documents.conditions));
-      }
-    } catch (_) {
-      // Document storage can be retried when the profile is saved.
-    }
-  }
-
-  Future<void> _choosePhoto() async {
-    if (_pickingPhoto) return;
-    FocusScope.of(context).unfocus();
-    setState(() => _pickingPhoto = true);
-    try {
-      final image = await (widget.imagePicker ?? ImagePicker()).pickImage(
+      final photo = await (widget.imagePicker ?? ImagePicker()).pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
-        requestFullMetadata: false,
       );
-      if (image == null || !mounted) return;
-      final bytes = await ProfilePhotoService.readPhoto(image);
+      if (photo == null) return;
+      final bytes = await ProfilePhotoService.readPhoto(photo);
+      if (mounted && generation == session.generation) {
+        context.read<CareData>().setProfilePhoto(bytes);
+      }
+    } catch (e) {
       if (!mounted) return;
-      context.read<CareData>().setProfilePhoto(bytes);
-    } catch (error) {
-      if (!mounted) return;
-      final denied =
-          error is PlatformException &&
-          (error.code == 'photo_access_denied' ||
-              error.code == 'photo_access_restricted');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            denied
+            e is PlatformException
                 ? 'Autorisez l’accès aux photos dans les paramètres du téléphone.'
-                : error is ProfilePhotoTooLargeException
-                ? 'Cette photo est trop volumineuse. Choisissez une image de moins de 10 Mo.'
-                : 'Impossible d’importer cette photo. Essayez une autre image.',
+                : 'Impossible de lire cette photo. Choisissez une image de moins de 10 Mo.',
           ),
         ),
       );
+    }
+  }
+
+  static const fields = <String, String>{
+    'nom': 'Nom',
+    'prenoms': 'Prénoms',
+    'email': 'E-mail',
+    'telephone': 'Téléphone',
+    'dateNaissance': 'Date de naissance (AAAA-MM-JJ)',
+    'adresse': 'Adresse',
+    'ville': 'Ville',
+    'pays': 'Pays',
+    'languePreferee': 'Langue préférée',
+    'personneAContacter': 'Contact d’urgence',
+    'telephoneUrgence': 'Téléphone d’urgence',
+    'groupeSanguin': 'Groupe sanguin',
+    'tailleCm': 'Taille (cm)',
+    'poidsKg': 'Poids (kg)',
+    'allergies': 'Allergies',
+    'antecedents': 'Antécédents',
+  };
+  final controllers = {
+    for (final key in fields.keys) key: TextEditingController(),
+  };
+  final form = GlobalKey<FormState>();
+  String sexe = 'NON_RENSEIGNE';
+  String? pathologie, error;
+  bool loading = true, saving = false;
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(load);
+  }
+
+  Future<void> load() async {
+    try {
+      final session = context.read<ApiSession>();
+      await session.refreshProfile();
+      if (!mounted) return;
+      final p = session.profile!;
+      for (final e in controllers.entries) {
+        e.value.text = p[e.key]?.toString() ?? '';
+      }
+      sexe = p['sexe'] as String? ?? 'NON_RENSEIGNE';
+      pathologie = p['pathologie'] as String?;
+      setState(() {
+        loading = false;
+        error = null;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          loading = false;
+          error = e.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> save() async {
+    if (!form.currentState!.validate()) return;
+    setState(() => saving = true);
+    try {
+      final values = <String, dynamic>{
+        for (final e in controllers.entries)
+          e.key: e.value.text.trim().isEmpty ? null : e.value.text.trim(),
+        'sexe': sexe,
+        'pathologie': pathologie,
+      };
+      for (final k in ['poidsKg', 'tailleCm']) {
+        values[k] = double.tryParse(controllers[k]!.text.replaceAll(',', '.'));
+      }
+      await context.read<ApiSession>().saveProfile(values);
+      if (mounted) {
+        setState(() => error = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil enregistré sur le serveur.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
     } finally {
-      if (mounted) setState(() => _pickingPhoto = false);
+      if (mounted) setState(() => saving = false);
     }
   }
 
   @override
   void dispose() {
-    _nom.dispose();
-    _prenom.dispose();
-    _poids.dispose();
-    _taille.dispose();
+    for (final c in controllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  String? _required(String? v) =>
-      (v == null || v.trim().isEmpty) ? 'Ce champ est obligatoire' : null;
+  Widget field(String key) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _Label(fields[key]!),
+      Semantics(
+        label: fields[key],
+        child: TextFormField(
+          key: ValueKey('profile-$key'),
+          controller: controllers[key],
+          keyboardType: ['poidsKg', 'tailleCm'].contains(key)
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : key == 'email'
+              ? TextInputType.emailAddress
+              : key.toLowerCase().contains('telephone')
+              ? TextInputType.phone
+              : TextInputType.text,
+          style: AppDecor.t(14.5, w: FontWeight.w600),
+          decoration: decoration(fields[key]!),
+          validator: (v) {
+            if (['nom', 'prenoms'].contains(key) &&
+                (v == null || v.trim().isEmpty)) {
+              return 'Obligatoire';
+            }
+            if (['telephone', 'email'].contains(key) &&
+                controllers['telephone']!.text.trim().isEmpty &&
+                controllers['email']!.text.trim().isEmpty) {
+              return 'Renseignez un e-mail ou un téléphone';
+            }
+            if (['poidsKg', 'tailleCm'].contains(key) &&
+                v != null &&
+                v.isNotEmpty) {
+              final n = double.tryParse(v.replaceAll(',', '.'));
+              if (n == null || !n.isFinite || n <= 0) {
+                return 'Nombre positif requis';
+              }
+            }
+            if (key == 'dateNaissance' && v != null && v.isNotEmpty) {
+              final d = DateTime.tryParse(v);
+              if (d == null ||
+                  d.isAfter(DateTime.now()) ||
+                  !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v)) {
+                return 'Date valide au format AAAA-MM-JJ';
+              }
+            }
+            return null;
+          },
+        ),
+      ),
+    ],
+  );
+  InputDecoration decoration(String hint) => InputDecoration(
+    hintText: hint,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+    hintStyle: AppDecor.t(14, c: AppColors.textMuted),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: AppColors.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: AppColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+    ),
+  );
 
-  Future<void> _save() async {
-    FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    if (_conditionsChanged) {
-      try {
-        await _documents.setConditions(_conditions);
-      } catch (_) {
-        if (mounted) {
-          setState(() => _loading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Impossible d’enregistrer vos suivis. Réessayez.'),
-            ),
-          );
-        }
-        return;
-      }
-    }
-    // TODO: enregistrer le profil via ton service
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    if (widget.firstTime) {
-      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (r) => false);
+  void toggleCondition(String value, bool selected) {
+    final choices = {
+      if (pathologie?.contains('diabete') == true) 'diabete',
+      if (pathologie?.contains('hypertension') == true) 'hypertension',
+    };
+    if (selected) {
+      choices.add(value);
     } else {
-      Navigator.pop(context);
+      choices.remove(value);
     }
+    setState(
+      () => pathologie = choices.length == 2
+          ? 'diabete_hypertension'
+          : choices.isEmpty
+          ? null
+          : choices.first,
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                PageHeader(
-                  title: 'Votre profil',
-                  subtitle: 'Vos informations personnelles et médicales.',
-                  showBack: !widget.firstTime,
-                ),
-                const SizedBox(height: 26),
-                _Avatar(onAdd: _choosePhoto, loading: _pickingPhoto),
-                const SizedBox(height: 28),
-                _Label('Nom'),
-                _input(_nom, 'Votre nom', validator: _required),
-                _Label('Prénom'),
-                _input(_prenom, 'Votre prénom', validator: _required),
-                _Label('Sexe'),
-                _dropdown(_sexe, const [
-                  'Femme',
-                  'Homme',
-                ], (v) => setState(() => _sexe = v)),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.scaffoldBackground,
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: Form(
+              key: form,
+              child: Column(
+                children: [
+                  PageHeader(
+                    title: 'Votre profil',
+                    subtitle: 'Vos informations personnelles et médicales.',
+                    showBack: !widget.firstTime,
+                  ),
+                  const SizedBox(height: 26),
+                  _Avatar(onAdd: choosePhoto, loading: saving),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Photo limitée à cette session, non transmise au médecin.',
+                    textAlign: TextAlign.center,
+                    style: AppDecor.t(11, c: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 20),
+                  if (loading) const CircularProgressIndicator(),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  if (!loading) ...[
+                    field('nom'),
+                    field('prenoms'),
+                    const _Label('Sexe'),
+                    DropdownButtonFormField<String>(
+                      initialValue: sexe,
+                      decoration: decoration('Sélectionner'),
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'FEMININ',
+                          child: Text('Femme'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'MASCULIN',
+                          child: Text('Homme'),
+                        ),
+                        DropdownMenuItem(value: 'AUTRE', child: Text('Autre')),
+                        DropdownMenuItem(
+                          value: 'NON_RENSEIGNE',
+                          child: Text('Non renseigné'),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() => sexe = v!),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: field('poidsKg')),
+                        const SizedBox(width: 14),
+                        Expanded(child: field('tailleCm')),
+                      ],
+                    ),
+                    const _Label('Groupe sanguin (facultatif)'),
+                    DropdownButtonFormField<String>(
+                      initialValue: controllers['groupeSanguin']!.text,
+                      isExpanded: true,
+                      decoration: decoration('Sélectionner'),
+                      items: [
+                        for (final value in {
+                          '',
+                          'A+',
+                          'A-',
+                          'B+',
+                          'B-',
+                          'AB+',
+                          'AB-',
+                          'O+',
+                          'O-',
+                          controllers['groupeSanguin']!.text,
+                        })
+                          DropdownMenuItem(
+                            value: value,
+                            child: Text(
+                              value.isEmpty ? 'Non renseigné' : value,
+                            ),
+                          ),
+                      ],
+                      onChanged: (v) =>
+                          controllers['groupeSanguin']!.text = v ?? '',
+                    ),
+                    const _Label('Pathologies suivies'),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          _Label('Poids (kg)'),
-                          _input(
-                            _poids,
-                            '70',
-                            number: true,
-                            validator: _required,
+                          FilterChip(
+                            label: const Text('Diabète'),
+                            selected: pathologie?.contains('diabete') ?? false,
+                            onSelected: (v) => toggleCondition('diabete', v),
+                          ),
+                          FilterChip(
+                            label: const Text('Hypertension'),
+                            selected:
+                                pathologie?.contains('hypertension') ?? false,
+                            onSelected: (v) =>
+                                toggleCondition('hypertension', v),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _Label('Taille (cm)'),
-                          _input(
-                            _taille,
-                            '175',
-                            number: true,
-                            validator: _required,
-                          ),
-                        ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Vous pouvez sélectionner les deux pour adapter votre suivi.',
+                        style: AppDecor.t(12, c: AppColors.textMuted),
                       ),
+                    ),
+                    for (final key in [
+                      'email',
+                      'telephone',
+                      'dateNaissance',
+                      'adresse',
+                      'ville',
+                      'pays',
+                      'languePreferee',
+                      'personneAContacter',
+                      'telephoneUrgence',
+                      'allergies',
+                      'antecedents',
+                    ])
+                      field(key),
+                    const SizedBox(height: 30),
+                    GradientButton(
+                      text: 'Enregistrer',
+                      onPressed: save,
+                      isLoading: saving,
                     ),
                   ],
-                ),
-                _Label('Groupe sanguin (facultatif)'),
-                _dropdown(_groupe, const [
-                  'A+',
-                  'A-',
-                  'B+',
-                  'B-',
-                  'AB+',
-                  'AB-',
-                  'O+',
-                  'O-',
-                ], (v) => setState(() => _groupe = v)),
-                _Label('Pathologies suivies'),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final condition in MedicalCondition.values)
-                        FilterChip(
-                          label: Text(condition.label),
-                          selected: _conditions.contains(condition),
-                          onSelected: _loading
-                              ? null
-                              : (selected) => setState(() {
-                                  _conditionsChanged = true;
-                                  if (selected) {
-                                    _conditions.add(condition);
-                                  } else {
-                                    _conditions.remove(condition);
-                                  }
-                                }),
-                        ),
-                    ],
+                  TextButton(
+                    onPressed: saving ? null : load,
+                    child: const Text('Recharger le profil'),
                   ),
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Vous pouvez sélectionner les deux pour adapter votre carnet.',
-                    style: AppDecor.t(12, c: AppColors.textMuted),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                GradientButton(
-                  text: 'Enregistrer',
-                  onPressed: _save,
-                  isLoading: _loading,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  InputDecoration _deco(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: AppDecor.t(14, c: AppColors.textMuted),
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-    border: _border(AppColors.border),
-    enabledBorder: _border(AppColors.border),
-    focusedBorder: _border(AppColors.primary, 1.6),
-    errorBorder: _border(Colors.redAccent),
-    focusedErrorBorder: _border(Colors.redAccent, 1.6),
+    ),
   );
-
-  OutlineInputBorder _border(Color c, [double w = 1]) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(18),
-    borderSide: BorderSide(color: c, width: w),
-  );
-
-  Widget _input(
-    TextEditingController c,
-    String hint, {
-    bool number = false,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: c,
-      validator: validator,
-      keyboardType: number ? TextInputType.number : TextInputType.name,
-      style: AppDecor.t(14.5, w: FontWeight.w600),
-      decoration: _deco(hint),
-    );
-  }
-
-  Widget _dropdown(
-    String? value,
-    List<String> items,
-    ValueChanged<String?> onChanged,
-  ) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      isExpanded: true,
-      icon: const Icon(
-        Icons.keyboard_arrow_down_rounded,
-        color: AppColors.textMuted,
-      ),
-      decoration: _deco('Sélectionner'),
-      style: AppDecor.t(14.5, w: FontWeight.w600),
-      items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-          .toList(),
-      onChanged: onChanged,
-    );
-  }
 }
 
 class _Label extends StatelessWidget {

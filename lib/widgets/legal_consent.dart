@@ -21,10 +21,24 @@ class LegalConsent extends StatefulWidget {
 }
 
 class _LegalConsentState extends State<LegalConsent> {
+  bool _privacyRead = false, _termsRead = false;
+  Future<void> _read(String route, bool terms) async {
+    final read = await Navigator.pushNamed(context, route);
+    if (mounted && read == true) {
+      setState(() {
+        if (terms) {
+          _termsRead = true;
+        } else {
+          _privacyRead = true;
+        }
+      });
+    }
+  }
+
   late final _privacy = TapGestureRecognizer()
-    ..onTap = () => Navigator.pushNamed(context, AppRoutes.privacyPolicy);
+    ..onTap = () => _read(AppRoutes.privacyPolicy, false);
   late final _terms = TapGestureRecognizer()
-    ..onTap = () => Navigator.pushNamed(context, AppRoutes.termsOfUse);
+    ..onTap = () => _read(AppRoutes.termsOfUse, true);
 
   @override
   void dispose() {
@@ -67,7 +81,9 @@ class _LegalConsentState extends State<LegalConsent> {
                 value: widget.value,
                 semanticLabel:
                     'Accepter la politique de confidentialité et les conditions générales d’utilisation. Obligatoire pour s’inscrire.',
-                onChanged: (value) => widget.onChanged(value ?? false),
+                onChanged: _privacyRead && _termsRead
+                    ? (value) => widget.onChanged(value ?? false)
+                    : null,
                 activeColor: AppColors.primary,
                 side: BorderSide(
                   color: widget.showError
@@ -116,7 +132,7 @@ class _LegalConsentState extends State<LegalConsent> {
               child: Text(
                 widget.showError
                     ? 'Cochez la case pour accepter ces documents et vous inscrire.'
-                    : 'Acceptation obligatoire pour s’inscrire.',
+                    : 'Lisez et validez les deux documents jusqu’à la fin pour activer cette case.',
                 style: AppTextStyles.caption.copyWith(
                   fontSize: 11,
                   color: widget.showError

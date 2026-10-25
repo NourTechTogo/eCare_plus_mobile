@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../widgets/session_guard.dart';
 import '../../data/doctor_catalog.dart';
-import '../../models/care_data.dart';
+import '../../widgets/care_page.dart';
+import '../../widgets/doctor_message_button.dart';
+import '../messaging/doctor_contact_page.dart';
+import 'appointments_page.dart';
+import '../../services/api_session.dart';
 import '../../routes/app_routes.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import '../profile/profile_page.dart';
-import 'appointments_page.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/patient_avatar.dart';
-import '../../widgets/doctor_message_button.dart';
-import '../messaging/doctor_contact_page.dart';
 
 class HomePage extends StatelessWidget {
-  final VoidCallback? onWelcomeTap;
-  const HomePage({super.key, this.onWelcomeTap});
+  const HomePage({super.key});
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -73,7 +74,7 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 24),
                 const _SearchBar(),
                 const SizedBox(height: 22),
-                _WelcomeCard(onTap: onWelcomeTap),
+                const _WelcomeCard(),
                 const SizedBox(height: 24),
                 Text('Accès rapide', style: AppDecor.t(16, w: FontWeight.w700)),
                 const SizedBox(height: 10),
@@ -96,21 +97,8 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                SizedBox(
-                  height:
-                      268 +
-                      120 *
-                          (MediaQuery.textScalerOf(context).scale(14) / 14 - 1)
-                              .clamp(0, double.infinity),
-                  child: ListView.separated(
-                    key: const PageStorageKey('doctor-scroll'),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: doctorCatalog.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 14),
-                    itemBuilder: (_, index) =>
-                        _DoctorCard(doctor: doctorCatalog[index]),
-                  ),
-                ),
+                const DossierStatus(),
+                const _AssignedDoctorCarousel(),
               ],
             ),
           ),
@@ -125,9 +113,9 @@ class _Header extends StatelessWidget {
   const _Header({required this.greeting});
   @override
   Widget build(BuildContext context) {
-    final data = context.watch<CareData>();
     return PageHeader(
-      title: '$greeting Gloria',
+      title:
+          '$greeting ${context.watch<ApiSession>().profile?['prenoms'] ?? ''}',
       showBack: false,
       leading: Semantics(
         button: true,
@@ -159,8 +147,7 @@ class _Header extends StatelessWidget {
           onPressed: () =>
               Navigator.pushNamed(context, AppRoutes.notifications),
           icon: Badge(
-            isLabelVisible:
-                data.remindersEnabled && data.appointments.isNotEmpty,
+            isLabelVisible: false,
             backgroundColor: AppColors.primary,
             child: const Icon(
               Icons.notifications_none_rounded,
@@ -214,11 +201,10 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _WelcomeCard extends StatelessWidget {
-  final VoidCallback? onTap;
-  const _WelcomeCard({this.onTap});
-
+  const _WelcomeCard();
   @override
   Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
@@ -234,54 +220,40 @@ class _WelcomeCard extends StatelessWidget {
         ),
       ],
     ),
-    child: Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        splashColor: Colors.white.withValues(alpha: .15),
-        highlightColor: Colors.white.withValues(alpha: .08),
-        onTap: onTap ?? () => Navigator.pushNamed(context, AppRoutes.articles),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
-          child: Row(
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bienvenue',
-                      style: AppDecor.t(20, w: FontWeight.w700, c: Colors.white),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Votre suivi médical\ncommence ici.',
-                      style: AppDecor.t(13, c: const Color(0xFFE2EFFA), h: 1.5),
-                    ),
-                  ],
-                ),
+              Text(
+                'Bienvenue',
+                style: AppDecor.t(20, w: FontWeight.w700, c: Colors.white),
               ),
-              const SizedBox(width: 12),
-              Container(
-                width: 80,
-                height: 92,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Image.asset(
-                  'assets/images/ecareImage1.png',
-                  fit: BoxFit.contain,
-                  excludeFromSemantics: true,
-                ),
+              const SizedBox(height: 8),
+              Text(
+                'Votre suivi médical\ncommence ici.',
+                style: AppDecor.t(13, c: const Color(0xFFE2EFFA), h: 1.5),
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(width: 12),
+        Container(
+          width: 80,
+          height: 92,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Image.asset(
+            'assets/images/ecareImage1.png',
+            fit: BoxFit.contain,
+            excludeFromSemantics: true,
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -302,6 +274,12 @@ class _QuickActions extends StatelessWidget {
         'Documents',
         AppRoutes.documents,
         'lib/data/icon_document.png',
+      ),
+      (
+        Icons.medication_outlined,
+        'Traitements',
+        AppRoutes.treatments,
+        'lib/data/icon_medicament.png',
       ),
       (
         Icons.medical_services_outlined,
@@ -341,7 +319,7 @@ class _QuickActions extends StatelessWidget {
                         const Color(0xFFD3E6F8),
                         const Color(0xFFE9EFFB),
                         const Color(0xFFE8F2FC),
-                      ][index],
+                      ][index % 3],
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Image.asset(
@@ -391,77 +369,151 @@ class _DoctorCard extends StatelessWidget {
         ),
       ),
       child: Container(
-    width: 210,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: AppColors.border.withValues(alpha: .5)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 120,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: doctor.color,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Image.asset(
-              doctor.imageAsset,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              semanticLabel: doctor.name,
-              errorBuilder: (_, _, _) =>
-                  Icon(doctor.icon, color: AppColors.primary, size: 54),
-            ),
-          ),
+        width: 210,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border.withValues(alpha: .5)),
         ),
-        const SizedBox(height: 12),
-        Text(
-          doctor.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppDecor.t(13, w: FontWeight.w700),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          doctor.specialty,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppDecor.t(11, c: AppColors.textMuted),
-        ),
-        const Spacer(),
-        Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DoctorMessageButton(doctor: doctor),
-            const SizedBox(width: 6),
-            Expanded(
-              child: FilledButton.icon(
-                clipBehavior: Clip.antiAlias,
-                style: FilledButton.styleFrom(
-                  backgroundBuilder: AppDecor.buttonBackground,
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                onPressed: () =>
-                    openAppointmentsPage(context, doctor: doctor.name),
-                icon: const Icon(Icons.calendar_month_outlined, size: 14),
-                label: Text(
-                  'Planifier',
-                  style: AppDecor.t(12, w: FontWeight.w600, c: Colors.white),
+            Container(
+              height: 120,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: doctor.color,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  doctor.imageAsset,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  semanticLabel: doctor.name,
+                  errorBuilder: (_, _, _) =>
+                      Icon(doctor.icon, color: AppColors.primary, size: 54),
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            Text(
+              doctor.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppDecor.t(13, w: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              doctor.specialty,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppDecor.t(11, c: AppColors.textMuted),
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                DoctorMessageButton(doctor: doctor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: FilledButton.icon(
+                    clipBehavior: Clip.antiAlias,
+                    style: FilledButton.styleFrom(
+                      backgroundBuilder: AppDecor.buttonBackground,
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    onPressed: () =>
+                        openAppointmentsPage(context, doctor: doctor.name),
+                    icon: const Icon(Icons.calendar_month_outlined, size: 14),
+                    label: Text(
+                      'Planifier',
+                      style: AppDecor.t(
+                        12,
+                        w: FontWeight.w600,
+                        c: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-      ],
-    ),
       ),
     ),
   );
+}
+
+class _AssignedDoctorCarousel extends StatefulWidget {
+  const _AssignedDoctorCarousel();
+  @override
+  State<_AssignedDoctorCarousel> createState() =>
+      _AssignedDoctorCarouselState();
+}
+
+class _AssignedDoctorCarouselState extends State<_AssignedDoctorCarousel> {
+  List<CareDoctor>? doctors;
+  String? error;
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(load);
+  }
+
+  Future<void> load() async {
+    final api = context.read<ApiSession>();
+    final generation = api.generation;
+    try {
+      final rows = await api.all('/mobile/me/professionnels');
+      if (mounted && generation == api.generation) {
+        setState(() => doctors = rows.map(CareDoctor.fromServer).toList());
+      }
+    } catch (e) {
+      if (mounted && generation == api.generation) {
+        setState(() => error = e.toString());
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (error != null) {
+      return Column(
+        children: [
+          Text(error!, style: AppDecor.t(12, c: AppColors.textMuted)),
+          TextButton(onPressed: load, child: const Text('Réessayer')),
+        ],
+      );
+    }
+    if (doctors == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (doctors!.isEmpty) {
+      return const CareEmpty(
+        icon: Icons.medical_services_outlined,
+        title: 'Aucun professionnel affecté',
+        description: 'Contactez votre établissement pour être rattaché.',
+      );
+    }
+    return SizedBox(
+      height:
+          268 +
+          120 *
+              (MediaQuery.textScalerOf(context).scale(14) / 14 - 1).clamp(
+                0,
+                double.infinity,
+              ),
+      child: ListView.separated(
+        key: const PageStorageKey('doctor-scroll'),
+        scrollDirection: Axis.horizontal,
+        itemCount: doctors!.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
+        itemBuilder: (_, i) => _DoctorCard(doctor: doctors![i]),
+      ),
+    );
+  }
 }

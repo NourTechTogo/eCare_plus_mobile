@@ -32,9 +32,9 @@ class AuthField extends StatelessWidget {
   });
 
   OutlineInputBorder _border(Color c, [double w = 1]) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: c, width: w),
-      );
+    borderRadius: BorderRadius.circular(16),
+    borderSide: BorderSide(color: c, width: w),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -46,22 +46,34 @@ class AuthField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       cursorColor: AppColors.primary,
-      style: AppTextStyles.body.copyWith(fontSize: 15, color: AppColors.textMuted),
+      style: AppTextStyles.body.copyWith(
+        fontSize: 15,
+        color: AppColors.textMuted,
+      ),
       decoration: InputDecoration(
         labelText: label,
         helperText: helperText,
-        helperStyle: AppTextStyles.caption
-            .copyWith(color: AppColors.textMuted, fontSize: 12),
-        labelStyle: AppTextStyles.body
-            .copyWith(fontSize: 14, color: AppColors.textHint),
+        helperMaxLines: 4,
+        errorMaxLines: 4,
+        helperStyle: AppTextStyles.caption.copyWith(
+          color: AppColors.textMuted,
+          fontSize: 12,
+        ),
+        labelStyle: AppTextStyles.body.copyWith(
+          fontSize: 14,
+          color: AppColors.textHint,
+        ),
         floatingLabelStyle: AppTextStyles.body.copyWith(
-            fontSize: 13,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w600),
+          fontSize: 13,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
         filled: true,
         fillColor: const Color(0xFFF4F7FB),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 18,
+        ),
         prefixIcon: prefixText == null
             ? Icon(icon, color: AppColors.textHint, size: 21)
             : Padding(
@@ -71,11 +83,14 @@ class AuthField extends StatelessWidget {
                   children: [
                     Icon(icon, color: AppColors.textHint, size: 21),
                     const SizedBox(width: 8),
-                    Text(prefixText!,
-                        style: AppTextStyles.body.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15)),
+                    Text(
+                      prefixText!,
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -85,8 +100,10 @@ class AuthField extends StatelessWidget {
         focusedBorder: _border(AppColors.primary, 1.6),
         errorBorder: _border(AppColors.required),
         focusedErrorBorder: _border(AppColors.required, 1.6),
-        errorStyle: AppTextStyles.caption
-            .copyWith(color: AppColors.required, fontSize: 12),
+        errorStyle: AppTextStyles.caption.copyWith(
+          color: AppColors.required,
+          fontSize: 12,
+        ),
       ),
     );
   }

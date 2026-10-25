@@ -31,7 +31,15 @@ class _AppointmentAvailabilityFormState
   String? _error;
   late int _step;
   bool _doctorChosen = false;
-  static const _weekdays = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  static const _weekdays = [
+    'lun.',
+    'mar.',
+    'mer.',
+    'jeu.',
+    'ven.',
+    'sam.',
+    'dim.',
+  ];
   static const _months = [
     'janv.',
     'févr.',
@@ -302,14 +310,11 @@ class _AppointmentAvailabilityFormState
         const SizedBox(height: 16),
         _stepProgress(),
         const SizedBox(height: 18),
-        Text(
-          stepTitle,
-          style: AppDecor.t(17, w: FontWeight.w700),
-        ),
+        Text(stepTitle, style: AppDecor.t(17, w: FontWeight.w700)),
         const SizedBox(height: 6),
         Text(
           _step == 0
-              ? 'Choisissez le professionnel qui vous convient.'
+              ? 'Exemples pour votre agenda personnel ; ce choix ne crée aucune affectation médicale.'
               : '${_doctor.name} · ${_doctor.specialty}',
           style: AppDecor.t(12, c: AppColors.textMuted),
         ),

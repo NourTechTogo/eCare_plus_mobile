@@ -46,7 +46,7 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('Video fills the screen with all five controls visible', (
+  testWidgets('Video uses a bounded frame with all five controls visible', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 780);
@@ -61,7 +61,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getRect(find.byKey(const Key('doctor-video-background'))),
-      const Rect.fromLTWH(0, 0, 360, 780),
+      isNot(const Rect.fromLTWH(0, 0, 360, 780)),
     );
     for (final tooltip in [
       'Micro',

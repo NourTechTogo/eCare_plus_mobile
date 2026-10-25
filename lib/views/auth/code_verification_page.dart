@@ -78,8 +78,10 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.primary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        content: Text('Un nouveau code a été envoyé.',
-            style: AppTextStyles.caption.copyWith(color: Colors.white)),
+        content: Text(
+          'Un nouveau code a été envoyé.',
+          style: AppTextStyles.caption.copyWith(color: Colors.white),
+        ),
       ),
     );
   }
@@ -95,9 +97,13 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
       headerHeight: 320,
       child: Column(
         children: [
-          Text('Code PIN',
-              style: AppTextStyles.label.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w700)),
+          Text(
+            'Code PIN',
+            style: AppTextStyles.label.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 16),
           _OtpBoxes(
             controller: _code,
@@ -115,27 +121,40 @@ class _CodeVerificationPageState extends State<CodeVerificationPage> {
                 ? const SizedBox(width: double.infinity)
                 : Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Text(_error!,
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.caption.copyWith(
-                            color: AppColors.required, fontSize: 12.5)),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.required,
+                        fontSize: 12.5,
+                      ),
+                    ),
                   ),
           ),
           const SizedBox(height: 22),
           GradientButton(
-              text: 'Suivant', onPressed: _verify, isLoading: _loading),
+            text: 'Suivant',
+            onPressed: _verify,
+            isLoading: _loading,
+          ),
           const SizedBox(height: 12),
           canResend
               ? TextButton(
                   onPressed: _resend,
-                  child: Text('Renvoyer le code',
-                      style: AppTextStyles.link.copyWith(
-                          fontSize: 14.5, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    'Renvoyer le code',
+                    style: AppTextStyles.link.copyWith(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 )
               : Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Renvoyer le code dans ${_seconds}s',
-                      style: AppTextStyles.caption.copyWith(fontSize: 13)),
+                  child: Text(
+                    'Renvoyer le code dans ${_seconds}s',
+                    style: AppTextStyles.caption.copyWith(fontSize: 13),
+                  ),
                 ),
         ],
       ),
@@ -204,7 +223,9 @@ class _OtpBoxes extends StatelessWidget {
                       ],
                       onChanged: onChanged,
                       decoration: const InputDecoration(
-                          border: InputBorder.none, counterText: ''),
+                        border: InputBorder.none,
+                        counterText: '',
+                      ),
                     ),
                   ),
                 ),
@@ -221,16 +242,19 @@ class _Box extends StatelessWidget {
   final String char;
   final bool isActive;
   final bool hasError;
-  const _Box(
-      {required this.char, required this.isActive, required this.hasError});
+  const _Box({
+    required this.char,
+    required this.isActive,
+    required this.hasError,
+  });
 
   @override
   Widget build(BuildContext context) {
     final border = hasError
         ? AppColors.required
         : isActive
-            ? AppColors.primary
-            : Colors.transparent;
+        ? AppColors.primary
+        : Colors.transparent;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
       width: 58,
@@ -242,9 +266,10 @@ class _Box extends StatelessWidget {
         boxShadow: isActive
             ? [
                 BoxShadow(
-                    color: AppColors.primary.withAlpha(45),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6))
+                  color: AppColors.primary.withAlpha(45),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
               ]
             : null,
       ),
@@ -252,9 +277,10 @@ class _Box extends StatelessWidget {
       child: Text(
         char,
         style: AppTextStyles.heading1.copyWith(
-            fontSize: 28,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w800),
+          fontSize: 28,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }

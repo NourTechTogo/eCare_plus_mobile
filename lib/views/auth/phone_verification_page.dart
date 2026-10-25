@@ -17,8 +17,9 @@ class PhoneVerificationPage extends StatefulWidget {
 
 class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _phone =
-      TextEditingController(text: widget.initialPhone);
+  late final TextEditingController _phone = TextEditingController(
+    text: widget.initialPhone,
+  );
 
   @override
   void dispose() {
@@ -36,25 +37,36 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
       builder: (_) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('Confirmer le numéro',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.heading1.copyWith(
-                fontSize: 18,
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800)),
+        title: Text(
+          'Confirmer le numéro',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.heading1.copyWith(
+            fontSize: 18,
+            color: AppColors.primary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Nous allons envoyer un code de sécurité au numéro suivant :',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body.copyWith(
-                    fontSize: 14, height: 1.5, color: AppColors.textMuted)),
+            Text(
+              'Nous allons envoyer un code de sécurité au numéro suivant :',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.copyWith(
+                fontSize: 14,
+                height: 1.5,
+                color: AppColors.textMuted,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(full,
-                style: AppTextStyles.heading1.copyWith(
-                    fontSize: 20,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800)),
+            Text(
+              full,
+              style: AppTextStyles.heading1.copyWith(
+                fontSize: 20,
+                color: AppColors.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
@@ -62,8 +74,10 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Modifier',
-                style: AppTextStyles.label.copyWith(color: AppColors.textMuted)),
+            child: Text(
+              'Modifier',
+              style: AppTextStyles.label.copyWith(color: AppColors.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -73,11 +87,16 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
-            child: Text('Confirmer',
-                style: AppTextStyles.label.copyWith(
-                    color: Colors.white, fontWeight: FontWeight.w700)),
+            child: Text(
+              'Confirmer',
+              style: AppTextStyles.label.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -119,14 +138,19 @@ class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.shield_outlined,
-                    size: 16, color: AppColors.textHint),
+                const Icon(
+                  Icons.shield_outlined,
+                  size: 16,
+                  color: AppColors.textHint,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Votre numéro ne sert qu\'à vous envoyer des alertes et à sécuriser votre compte.',
-                    style: AppTextStyles.caption
-                        .copyWith(fontSize: 12.5, height: 1.4),
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 12.5,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],

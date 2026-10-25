@@ -4,7 +4,9 @@ import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
 import '../../widgets/care_page.dart';
 import '../../widgets/doctor_specialty_filter_sheet.dart';
-import '../messaging/doctor_chat_page.dart';
+import 'package:provider/provider.dart';
+import '../../services/api_session.dart';
+import '../messaging/server_chat_page.dart';
 import '../messaging/doctor_contact_page.dart';
 import 'appointments_page.dart';
 
@@ -18,11 +20,69 @@ class _DoctorsPageState extends State<DoctorsPage> {
   final _searchController = TextEditingController();
   String _query = '';
   String? _specialty;
+  List<CareDoctor>? _doctors;
+  String? _error;
+  bool _opening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_load);
+  }
+
+  Future<void> _load() async {
+    final api = context.read<ApiSession>();
+    final generation = api.generation;
+    try {
+      final rows = await api.all('/mobile/me/professionnels');
+      if (!mounted || api.generation != generation) return;
+      setState(() {
+        _doctors = rows.map(CareDoctor.fromServer).toList();
+        _error = null;
+      });
+    } catch (error) {
+      if (mounted && api.generation == generation) {
+        setState(() => _error = error.toString());
+      }
+    }
+  }
+
+  Future<void> _open(CareDoctor doctor) async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    try {
+      final api = context.read<ApiSession>();
+      final generation = api.generation;
+      final row = await api.request(
+        'POST',
+        '/mobile/conversations',
+        body: {'professionnelId': doctor.serverId},
+      );
+      if (!mounted || api.generation != generation) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => ServerChatPage(
+            conversationId: '${row['id']}',
+            doctorName: doctor.name,
+            doctor: doctor,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
 
   Future<void> _openFilters() async {
     FocusScope.of(context).unfocus();
     final specialties =
-        doctorCatalog.map((doctor) => doctor.specialty).toSet().toList()
+        (_doctors ?? <CareDoctor>[])
+            .map((doctor) => doctor.specialty)
+            .toSet()
+            .toList()
           ..sort();
     final result = await showModalBottomSheet<String>(
       context: context,
@@ -50,7 +110,7 @@ class _DoctorsPageState extends State<DoctorsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final doctors = doctorCatalog
+    final doctors = (_doctors ?? <CareDoctor>[])
         .where(
           (doctor) =>
               (_specialty == null || doctor.specialty == _specialty) &&
@@ -141,7 +201,23 @@ class _DoctorsPageState extends State<DoctorsPage> {
             ),
             const SizedBox(height: 12),
           ],
-          if (doctors.isEmpty)
+          if (_error != null) ...[
+            Text(
+              _error!,
+              style: AppDecor.t(13, c: Theme.of(context).colorScheme.error),
+            ),
+            TextButton(onPressed: _load, child: const Text('Réessayer')),
+          ],
+          if (_doctors == null && _error == null)
+            const Center(child: CircularProgressIndicator())
+          else if (_doctors?.isEmpty == true)
+            const CareEmpty(
+              icon: Icons.medical_services_outlined,
+              title: 'Aucun professionnel affecté',
+              description:
+                  'Contactez votre établissement pour votre rattachement.',
+            )
+          else if (doctors.isEmpty)
             const CareEmpty(
               icon: Icons.search_off_rounded,
               title: 'Aucun résultat',
@@ -150,7 +226,10 @@ class _DoctorsPageState extends State<DoctorsPage> {
             )
           else
             for (final doctor in doctors) ...[
-              _DoctorDirectoryCard(doctor: doctor),
+              _DoctorDirectoryCard(
+                doctor: doctor,
+                onMessage: _opening ? null : () => _open(doctor),
+              ),
               const SizedBox(height: 18),
             ],
         ],
@@ -161,7 +240,8 @@ class _DoctorsPageState extends State<DoctorsPage> {
 
 class _DoctorDirectoryCard extends StatelessWidget {
   final CareDoctor doctor;
-  const _DoctorDirectoryCard({required this.doctor});
+  final VoidCallback? onMessage;
+  const _DoctorDirectoryCard({required this.doctor, this.onMessage});
 
   @override
   Widget build(BuildContext context) => Material(
@@ -218,7 +298,7 @@ class _DoctorDirectoryCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: Tooltip(
-                    message: 'Message à ${doctor.name}',
+                    message: 'Écrire un message',
                     child: FilledButton.icon(
                       clipBehavior: Clip.antiAlias,
                       style: FilledButton.styleFrom(
@@ -234,12 +314,7 @@ class _DoctorDirectoryCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => DoctorChatPage(doctor: doctor),
-                        ),
-                      ),
+                      onPressed: onMessage,
                       icon: const Icon(
                         Icons.chat_bubble_outline_rounded,
                         size: 18,

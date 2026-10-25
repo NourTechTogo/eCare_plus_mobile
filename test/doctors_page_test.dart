@@ -1,136 +1,117 @@
+import 'dart:convert';
+import 'package:ecare_plus_mobile/services/api_session.dart';
 import 'package:ecare_plus_mobile/views/dashbord/doctors_page.dart';
-import 'package:ecare_plus_mobile/views/messaging/doctor_contact_page.dart';
+import 'package:ecare_plus_mobile/views/messaging/server_chat_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:ecare_plus_mobile/models/care_data.dart';
-import 'package:ecare_plus_mobile/views/messaging/doctor_chat_page.dart';
+import 'support/api_fixture.dart';
 
 void main() {
-  testWidgets('Search filters doctors and clearing restores the directory', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: DoctorsPage()));
-    expect(find.text('Tous'), findsNothing);
-    expect(find.text('Suivi personnalisé'), findsNothing);
-    await tester.enterText(find.byType(TextField), 'Cardiologue');
-    await tester.pumpAndSettle();
-    expect(find.text('Aucun résultat'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'Jennifer');
-    await tester.pumpAndSettle();
-    expect(find.text('Dr Lawson Jennifer'), findsOneWidget);
-    expect(find.text('Dr Johnson Mike'), findsNothing);
-    await tester.enterText(find.byType(TextField), 'inconnu');
-    await tester.pumpAndSettle();
-    expect(find.text('Aucun résultat'), findsOneWidget);
-    await tester.tap(find.byTooltip('Effacer la recherche'));
-    await tester.pumpAndSettle();
-    expect(find.text('Dr Johnson Mike'), findsOneWidget);
-  });
-
-  testWidgets(
-    'Specialty filter combines with name and clearing search keeps the specialty',
-    (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: DoctorsPage()));
-      await tester.tap(find.byTooltip('Filtres'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(DropdownButtonFormField<String>));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Cardiologue').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Afficher les médecins'));
-      await tester.pumpAndSettle();
-      expect(find.text('Dr Lawson Jennifer'), findsOneWidget);
-      expect(find.text('Dr Johnson Mike'), findsNothing);
-      expect(find.text('Spécialité : Cardiologue'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), 'Johnson');
-      await tester.pumpAndSettle();
-      expect(find.text('Aucun résultat'), findsOneWidget);
-      await tester.tap(find.byTooltip('Effacer la recherche'));
-      await tester.pumpAndSettle();
-      expect(find.text('Dr Lawson Jennifer'), findsOneWidget);
-      expect(find.text('Dr Johnson Mike'), findsNothing);
-      await tester.tap(find.byTooltip('Retirer le filtre de spécialité'));
-      await tester.pumpAndSettle();
-      expect(find.text('Dr Johnson Mike'), findsOneWidget);
-    },
-  );
-
-  testWidgets('Closing specialty filters discards draft choices', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: DoctorsPage()));
-    await tester.tap(find.byTooltip('Filtres'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cardiologue').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Fermer les filtres'));
-    await tester.pumpAndSettle();
-    expect(find.text('Dr Johnson Mike'), findsOneWidget);
-    expect(find.text('Spécialité : Cardiologue'), findsNothing);
-  });
-
-  testWidgets('Doctor card opens the selected profile', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: DoctorsPage()));
-    await tester.tap(find.text('Dr Johnson Mike').first);
-    await tester.pumpAndSettle();
-    expect(find.byType(DoctorContactPage), findsOneWidget);
-    expect(find.text('Dr Johnson Mike'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('The blue message button opens chat instead of the profile', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => CareData(),
-        child: const MaterialApp(home: DoctorsPage()),
-      ),
-    );
-    await tester.tap(find.text('Message').first);
-    await tester.pumpAndSettle();
-    expect(find.byType(DoctorChatPage), findsOneWidget);
-    expect(find.byType(DoctorContactPage), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
   for (final scale in [1.0, 2.0]) {
     testWidgets(
-      'Doctor cards remain usable on a narrow phone at scale $scale',
+      'Assigned doctors only, server UUID opens chat at text scale $scale',
       (tester) async {
-        tester.view.physicalSize = const Size(320, 740);
+        tester.view.physicalSize = const Size(360, 800);
         tester.view.devicePixelRatio = 1;
-        tester.platformDispatcher.textScaleFactorTestValue = scale;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
-        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        Map<String, dynamic>? opened;
+        final session = await signedInSession(
+          handler: (r) async {
+            if (r.url.path.endsWith('/professionnels')) {
+              return jsonResponse(
+                '[{"id":"doctor-uuid","nom":"Médecin","prenoms":"Affecté","specialite":"Suivi"}]',
+                200,
+              );
+            }
+            if (r.method == 'POST' && r.url.path.endsWith('/conversations')) {
+              opened = jsonDecode(r.body) as Map<String, dynamic>;
+              return jsonResponse('{"id":"conversation-uuid"}', 201);
+            }
+            return jsonResponse('{"content":[],"totalPages":1}', 200);
+          },
+        );
         await tester.pumpWidget(
-          ChangeNotifierProvider(
-            create: (_) => CareData(),
-            child: const MaterialApp(home: DoctorsPage()),
+          ChangeNotifierProvider<ApiSession>(
+            create: (_) => session,
+            child: MaterialApp(
+              builder: (c, w) => MediaQuery(
+                data: MediaQuery.of(
+                  c,
+                ).copyWith(textScaler: TextScaler.linear(scale)),
+                child: w!,
+              ),
+              home: const DoctorsPage(),
+            ),
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.byTooltip('Filtres'));
+        expect(find.text('Affecté Médecin'), findsOneWidget);
+        expect(find.textContaining('Lawson'), findsNothing);
+        await tester.ensureVisible(find.byTooltip('Écrire un message'));
+        await tester.tap(find.byTooltip('Écrire un message'));
         await tester.pumpAndSettle();
-        await tester.tap(find.byType(DropdownButtonFormField<String>));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Cardiologue').last);
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Afficher les médecins'));
-        await tester.tap(find.text('Afficher les médecins'));
-        await tester.pumpAndSettle();
-        expect(find.text('Spécialité : Cardiologue'), findsOneWidget);
+        expect(opened, {'professionnelId': 'doctor-uuid'});
+        expect(find.byType(ServerChatPage), findsOneWidget);
+        expect(find.byIcon(Icons.videocam), findsNothing);
         expect(tester.takeException(), isNull);
-        await tester.ensureVisible(find.text('Ajouter à mon agenda').first);
-        await tester.tap(find.text('Ajouter à mon agenda').first);
-        await tester.pumpAndSettle();
-        expect(find.byType(TextFormField), findsWidgets);
-        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
       },
     );
   }
+  testWidgets('No assigned doctor does not invent a directory', (tester) async {
+    final session = await signedInSession(
+      handler: (r) async => jsonResponse('[]', 200),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider<ApiSession>(
+        create: (_) => session,
+        child: const MaterialApp(home: DoctorsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aucun professionnel affecté'), findsOneWidget);
+  });
+  testWidgets(
+    'Chat preserves draft after rejected send and never fabricates reply',
+    (tester) async {
+      var fail = true;
+      final session = await signedInSession(
+        handler: (r) async =>
+            r.method == 'POST' && r.url.path.endsWith('/messages')
+            ? jsonResponse('{"detail":"Envoi refusé"}', fail ? 503 : 201)
+            : jsonResponse('{"content":[],"totalPages":1}', 200),
+      );
+      await tester.pumpWidget(
+        ChangeNotifierProvider<ApiSession>(
+          create: (_) => session,
+          child: const MaterialApp(
+            home: ServerChatPage(
+              conversationId: 'real-id',
+              doctorName: 'Docteur',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Bonjour');
+      await tester.tap(find.byTooltip('Envoyer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Envoi refusé'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Bonjour',
+      );
+      fail = false;
+      await tester.tap(find.byTooltip('Envoyer'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      expect(find.textContaining('Bonjour docteur'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

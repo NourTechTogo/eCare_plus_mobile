@@ -8,7 +8,7 @@ class LegalSection {
   const LegalSection(this.title, this.body);
 }
 
-class LegalPage extends StatelessWidget {
+class LegalPage extends StatefulWidget {
   final String title, introduction;
   final IconData icon;
   final List<LegalSection> sections;
@@ -19,48 +19,46 @@ class LegalPage extends StatelessWidget {
     required this.icon,
     required this.sections,
   });
-
   @override
-  Widget build(BuildContext context) => CarePage(
-    title: title,
-    subtitle: 'eCARE+ · Mise à jour du 16 octobre 2026',
-    child: CareCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.primary, size: 28),
-          const SizedBox(height: 14),
-          Text(
-            'Version de développement',
-            style: AppDecor.t(13, w: FontWeight.w600, c: AppColors.primary),
-          ),
-          const SizedBox(height: 12),
-          SelectableText(
-            introduction,
-            style: AppDecor.t(14, c: AppColors.textDark, h: 1.8),
-          ),
-          for (final section in sections) ...[
-            const SizedBox(height: 28),
-            Semantics(
-              header: true,
-              child: Text(
-                section.title,
-                style: AppDecor.t(
-                  17,
-                  w: FontWeight.w700,
-                  c: AppColors.primaryDeep,
-                  h: 1.4,
+  State<LegalPage> createState() => _LegalPageState();
+}
+
+class _LegalPageState extends State<LegalPage> {
+  bool read = false;
+  @override
+  Widget build(BuildContext context) =>
+      NotificationListener<ScrollNotification>(
+        onNotification: (n) {
+          if (n.metrics.extentAfter < 8 && !read) setState(() => read = true);
+          return false;
+        },
+        child: CarePage(
+          title: widget.title,
+          subtitle: 'eCARE+ · Version du 24 octobre 2026',
+          child: CareCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(widget.icon, color: AppColors.primary, size: 28),
+                const SizedBox(height: 14),
+                SelectableText(
+                  widget.introduction,
+                  style: AppDecor.t(14, h: 1.8),
                 ),
-              ),
+                for (final s in widget.sections) ...[
+                  const SizedBox(height: 28),
+                  Text(s.title, style: AppDecor.t(17, w: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  SelectableText(s.body, style: AppDecor.t(14, h: 1.8)),
+                ],
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: read ? () => Navigator.pop(context, true) : null,
+                  child: const Text('J’ai lu ce document jusqu’à la fin'),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            SelectableText(
-              section.body,
-              style: AppDecor.t(14, c: AppColors.textDark, h: 1.8),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
+          ),
+        ),
+      );
 }

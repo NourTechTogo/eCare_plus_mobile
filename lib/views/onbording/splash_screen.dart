@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_text_styles.dart';
@@ -15,6 +16,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  Timer? _navigation;
 
   @override
   void initState() {
@@ -24,18 +26,20 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1200),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.6,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _controller.forward();
 
     // Naviguer vers l'onboarding après 2.5 secondes
-    Future.delayed(const Duration(milliseconds: 2500), () {
+    _navigation = Timer(const Duration(milliseconds: 2500), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
       }
@@ -44,6 +48,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _navigation?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -87,10 +92,7 @@ class _SplashScreenState extends State<SplashScreen>
               builder: (context, child) {
                 return FadeTransition(
                   opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: child,
-                  ),
+                  child: ScaleTransition(scale: _scaleAnimation, child: child),
                 );
               },
               child: Column(

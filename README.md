@@ -1,5 +1,20 @@
 # eCare+
 
+## Livraison indépendante du 25 octobre 2026
+
+Branche `ecare_mobile_stable`, reliée uniquement à son dépôt GitHub. Les [ajouts détaillés](AJOUTS_RECENTS.md), [contrats API](docs/backend/API.md) et [validation / limites](docs/VALIDATION.md) sont disponibles dans ce dépôt.
+
+### Lancer le client patient
+
+Prérequis : Flutter compatible avec `pubspec.yaml` et SDK Android. Exécuter `flutter pub get`, puis `flutter run --dart-define=API_URL=http://127.0.0.1:8081/api/v1`. Sur téléphone USB, configurer `adb reverse tcp:8081 tcp:8081` ; LiveKit local nécessite aussi les ports 7880/7881 selon sa configuration. Hors USB, fournir une URL joignable depuis le téléphone. Ne jamais inclure les clés LiveKit côté Flutter.
+
+Analyse et tests : `flutter analyze` et `flutter test`. Compilation : `flutter build apk --debug --dart-define=API_URL=http://127.0.0.1:8081/api/v1`.
+
+
+> Présentation : conserver le design mobile existant lors des intégrations fonctionnelles. Les écrans Mes médecins, Messages et Appels ont été restaurés à partir de l'archive d'origine en gardant le backend commun. Toute nouvelle modification de design doit être demandée explicitement. Voir [AJOUTS_RECENTS.md](AJOUTS_RECENTS.md).
+
+> Intégration au backend commun du 25 octobre 2026 : [bilan et preuves](docs/integration-clients/BILAN.md), [configuration des services](docs/integration-clients/CONFIGURATION.md), [contrats API](docs/backend/API.md). Le carnet principal est distant ; les archives locales sont préservées. La prévisualisation Flutter navigateur utilise 5184 et le backend 8081. Les descriptions historiques ci-dessous ne valent pas preuve de disponibilité du push, des rappels natifs ou des fournisseurs d'appel.
+
 **eCare+** est une application mobile de suivi et d'accompagnement des patients atteints de maladies chroniques, notamment le diabète et l'hypertension artérielle.
 
 L'application permet aux patients de suivre leurs constantes de santé, consulter leur historique et leurs statistiques, recevoir des rappels et accéder à des contenus éducatifs afin de mieux gérer leur santé au quotidien.

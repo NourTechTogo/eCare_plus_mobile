@@ -21,6 +21,13 @@ class FollowUpPage extends StatefulWidget {
 
 class _FollowUpPageState extends State<FollowUpPage> {
   bool _selectedPressure = false;
+  @override
+  void initState() {
+    super.initState();
+    final data = context.read<CareData>();
+    Future.microtask(data.refresh);
+  }
+
   bool get _pressure => switch (widget.mode) {
     FollowUpMode.combined => _selectedPressure,
     FollowUpMode.glucose => false,
@@ -70,6 +77,7 @@ class _FollowUpPageState extends State<FollowUpPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
               children: [
+                if (data.syncError != null) Text(data.syncError!),
                 PageHeader(
                   title: switch (widget.mode) {
                     FollowUpMode.combined => 'Mon suivi',
@@ -85,6 +93,21 @@ class _FollowUpPageState extends State<FollowUpPage> {
                       'Votre tension artérielle et son évolution, au même endroit.',
                   },
                 ),
+                if (widget.mode == FollowUpMode.combined)
+                  for (final m in data.measurements.where(
+                    (m) => ![
+                      'GLYCEMIE',
+                      'TENSION_ARTERIELLE',
+                    ].contains(m['typeMesure']),
+                  ))
+                    Card(
+                      child: ListTile(
+                        title: Text(
+                          "${m['typeMesure']} : ${m['valeurPrincipale']} ${m['unite']}",
+                        ),
+                        subtitle: Text("${m['dateMesure']}"),
+                      ),
+                    ),
                 const SizedBox(height: 26),
                 if (widget.mode == FollowUpMode.combined) ...[
                   Container(
@@ -328,11 +351,11 @@ Future<void> showMeasurementSheet(
   BuildContext context, {
   bool? pressure,
 }) async {
-  final data = context.read<CareData>();
   final result = await showDialog<_MeasurementInput>(
     context: context,
     builder: (dialogContext) => Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      backgroundColor: AppColors.scaffoldBackground,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       child: ConstrainedBox(
@@ -345,11 +368,6 @@ Future<void> showMeasurementSheet(
     ),
   );
   if (result == null || !context.mounted) return;
-  if (result.secondary == null) {
-    data.addReading(result.primary, date: result.date);
-  } else {
-    data.addBloodPressure(result.primary, result.secondary!, date: result.date);
-  }
   ScaffoldMessenger.of(
     context,
   ).showSnackBar(const SnackBar(content: Text('Constante enregistrée')));
@@ -370,7 +388,28 @@ class _MeasurementForm extends StatefulWidget {
 }
 
 class _MeasurementFormState extends State<_MeasurementForm> {
-  late bool _pressure = widget.pressure ?? false;
+  late String _type = widget.pressure == true
+      ? 'TENSION_ARTERIELLE'
+      : 'GLYCEMIE';
+  bool get _pressure => _type == 'TENSION_ARTERIELLE';
+  bool _busy = false;
+  final String _sourceRef = 'manual-${DateTime.now().microsecondsSinceEpoch}';
+  static const types = {
+    'GLYCEMIE': 'Glycémie',
+    'TENSION_ARTERIELLE': 'Tension artérielle',
+    'POIDS': 'Poids',
+    'FREQUENCE_CARDIAQUE': 'Fréquence cardiaque',
+    'TEMPERATURE': 'Température',
+    'SPO2': 'Saturation en oxygène',
+  };
+  String get unit => {
+    'GLYCEMIE': 'mg/dL',
+    'TENSION_ARTERIELLE': 'mmHg',
+    'POIDS': 'kg',
+    'FREQUENCE_CARDIAQUE': 'bpm',
+    'TEMPERATURE': '°C',
+    'SPO2': '%',
+  }[_type]!;
   final _form = GlobalKey<FormState>();
   final _primary = TextEditingController();
   final _secondary = TextEditingController();
@@ -394,7 +433,14 @@ class _MeasurementFormState extends State<_MeasurementForm> {
           suffixText: unit,
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
         ),
         validator: (value) {
           final number = _parse(value ?? '');
@@ -403,152 +449,357 @@ class _MeasurementFormState extends State<_MeasurementForm> {
               : null;
         },
       );
+  Future<void> save() async {
+    if (!_form.currentState!.validate()) return;
+    if (_date.isAfter(DateTime.now())) {
+      setState(
+        () => _error = 'La date de la mesure ne peut pas être dans le futur.',
+      );
+      return;
+    }
+    if (_pressure && _parse(_primary.text)! <= _parse(_secondary.text)!) {
+      setState(
+        () => _error = 'La systolique doit être supérieure à la diastolique.',
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await context.read<CareData>().submitMeasurement(
+        _type,
+        _parse(_primary.text)!,
+        unit,
+        secondary: _pressure ? _parse(_secondary.text) : null,
+        date: _date,
+        sourceRef: _sourceRef,
+      );
+      if (!mounted) return;
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _busy = false;
+        });
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    Navigator.pop(
+      context,
+      _MeasurementInput(
+        _parse(_primary.text)!,
+        _pressure ? _parse(_secondary.text)! : null,
+        _date,
+      ),
+    );
+  }
+
+  IconData iconFor(String type) => switch (type) {
+    'GLYCEMIE' => Icons.water_drop_outlined,
+    'TENSION_ARTERIELLE' => Icons.monitor_heart_outlined,
+    'POIDS' => Icons.monitor_weight_outlined,
+    'FREQUENCE_CARDIAQUE' => Icons.favorite_border_rounded,
+    'TEMPERATURE' => Icons.thermostat_rounded,
+    _ => Icons.air_rounded,
+  };
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.all(24),
-    child: Form(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, layout) => Form(
       key: _form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.pressure == null
-                ? 'Ajouter une constante'
-                : _pressure
-                ? 'Nouvelle tension artérielle'
-                : 'Nouvelle glycémie',
-            style: AppDecor.t(20, w: FontWeight.w700),
-          ),
-          if (widget.pressure == null) ...[
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final pressure in [false, true])
-                  ChoiceChip(
-                    label: Text(pressure ? 'Tension artérielle' : 'Glycémie'),
-                    selected: _pressure == pressure,
-                    onSelected: pressure == _pressure
-                        ? null
-                        : (_) => setState(() {
-                            _pressure = pressure;
-                            _primary.clear();
-                            _secondary.clear();
-                            _error = null;
-                            _form.currentState?.reset();
-                          }),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.pressure == null
+                            ? 'Ajouter une constante'
+                            : _pressure
+                            ? 'Nouvelle tension artérielle'
+                            : 'Nouvelle glycémie',
+                        style: AppDecor.t(
+                          20,
+                          w: FontWeight.w700,
+                          c: AppColors.primaryDeep,
+                          h: 1.3,
+                        ),
+                      ),
+                      if (layout.maxHeight > 460) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Renseignez votre mesure et le moment de la prise.',
+                          style: AppDecor.t(12, c: AppColors.textMuted, h: 1.5),
+                        ),
+                      ],
+                    ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'Fermer',
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textMuted,
+                  ),
+                ),
               ],
             ),
-          ],
-          const SizedBox(height: 22),
-          Image.asset(
-            _pressure
-                ? 'lib/data/ajout_tension.png'
-                : 'lib/data/ajout_glycemie.png',
-            height: 150,
-            width: 200,
-            fit: BoxFit.contain,
-            excludeFromSemantics: true,
           ),
-          const SizedBox(height: 22),
-          _field(
-            _primary,
-            _pressure ? 'Systolique' : 'Glycémie',
-            _pressure ? 'mmHg' : 'mg/dL',
-          ),
-          if (_pressure) ...[
-            const SizedBox(height: 16),
-            _field(_secondary, 'Diastolique', 'mmHg'),
-          ],
-          const SizedBox(height: 14),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(
-              Icons.calendar_month_outlined,
-              color: AppColors.primary,
-            ),
-            title: Text(careDate(_date)),
-            trailing: const Icon(Icons.edit_outlined, size: 18),
-            onTap: () async {
-              final date = await showCareDatePicker(
-                context: context,
-                initialDate: _date,
-                firstDate: DateTime(2000),
-                lastDate: DateTime.now(),
-              );
-              if (date != null && mounted) {
-                setState(
-                  () => _date = DateTime(
-                    date.year,
-                    date.month,
-                    date.day,
-                    _date.hour,
-                    _date.minute,
+          const Divider(height: 1, color: AppColors.border),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.pressure == null) ...[
+                    Text(
+                      'Quelle constante souhaitez-vous ajouter ?',
+                      style: AppDecor.t(13, w: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    LayoutBuilder(
+                      builder: (context, c) {
+                        if (c.maxWidth < 330) {
+                          return DropdownButtonFormField<String>(
+                            initialValue: _type,
+                            isExpanded: true,
+                            itemHeight: null,
+                            decoration: InputDecoration(
+                              labelText: 'Type de constante',
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(
+                                  color: AppColors.border,
+                                ),
+                              ),
+                            ),
+                            items: [
+                              for (final type in types.keys)
+                                DropdownMenuItem(
+                                  value: type,
+                                  child: Text(
+                                    types[type]!,
+                                    style: AppDecor.t(13, w: FontWeight.w600),
+                                    softWrap: true,
+                                  ),
+                                ),
+                            ],
+                            onChanged: _busy
+                                ? null
+                                : (type) {
+                                    if (type == null || type == _type) {
+                                      return;
+                                    }
+                                    setState(() {
+                                      _type = type;
+                                      _primary.clear();
+                                      _secondary.clear();
+                                      _error = null;
+                                      _form.currentState?.reset();
+                                    });
+                                  },
+                          );
+                        }
+                        final single =
+                            MediaQuery.textScalerOf(context).scale(14) > 20;
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final type in types.keys)
+                              SizedBox(
+                                width: single
+                                    ? c.maxWidth
+                                    : (c.maxWidth - 10) / 2,
+                                child: Semantics(
+                                  button: true,
+                                  selected: _type == type,
+                                  child: Material(
+                                    color: _type == type
+                                        ? AppColors.primary
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: InkWell(
+                                      onTap: _busy || _type == type
+                                          ? null
+                                          : () => setState(() {
+                                              _type = type;
+                                              _primary.clear();
+                                              _secondary.clear();
+                                              _error = null;
+                                              _form.currentState?.reset();
+                                            }),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        constraints: const BoxConstraints(
+                                          minHeight: 60,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 14,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: _type == type
+                                                ? AppColors.primary
+                                                : AppColors.border,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              iconFor(type),
+                                              size: 19,
+                                              color: _type == type
+                                                  ? Colors.white
+                                                  : AppColors.primary,
+                                            ),
+                                            const SizedBox(width: 9),
+                                            Expanded(
+                                              child: Text(
+                                                types[type]!,
+                                                style: AppDecor.t(
+                                                  12,
+                                                  w: FontWeight.w600,
+                                                  c: _type == type
+                                                      ? Colors.white
+                                                      : AppColors.textMuted,
+                                                  h: 1.4,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                  ],
+                  Text(
+                    'Valeur mesurée',
+                    style: AppDecor.t(
+                      13,
+                      w: FontWeight.w600,
+                      c: AppColors.primaryDeep,
+                    ),
                   ),
-                );
-              }
-            },
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(
-              Icons.schedule_rounded,
-              color: AppColors.primary,
-            ),
-            title: Text(careTime(_date)),
-            trailing: const Icon(Icons.edit_outlined, size: 18),
-            onTap: () async {
-              final time = await showCareTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(_date),
-              );
-              if (time != null && mounted) {
-                setState(
-                  () => _date = DateTime(
-                    _date.year,
-                    _date.month,
-                    _date.day,
-                    time.hour,
-                    time.minute,
+                  const SizedBox(height: 12),
+                  _field(
+                    _primary,
+                    _pressure ? 'Systolique' : types[_type]!,
+                    unit,
                   ),
-                );
-              }
-            },
+                  if (_pressure) ...[
+                    const SizedBox(height: 14),
+                    _field(_secondary, 'Diastolique', 'mmHg'),
+                  ],
+                  const SizedBox(height: 20),
+                  Text(
+                    'Date et heure',
+                    style: AppDecor.t(
+                      13,
+                      w: FontWeight.w600,
+                      c: AppColors.primaryDeep,
+                    ),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.calendar_month_outlined,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(careDate(_date)),
+                    trailing: const Icon(Icons.edit_outlined, size: 18),
+                    onTap: () async {
+                      final date = await showCareDatePicker(
+                        context: context,
+                        initialDate: _date,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (date != null && mounted) {
+                        setState(
+                          () => _date = DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            _date.hour,
+                            _date.minute,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.schedule_rounded,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(careTime(_date)),
+                    trailing: const Icon(Icons.edit_outlined, size: 18),
+                    onTap: () async {
+                      final time = await showCareTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(_date),
+                      );
+                      if (time != null && mounted) {
+                        setState(
+                          () => _date = DateTime(
+                            _date.year,
+                            _date.month,
+                            _date.day,
+                            time.hour,
+                            time.minute,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        _error!,
+                        style: AppDecor.t(12, c: AppColors.required, h: 1.5),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-          if (_error != null)
-            Text(_error!, style: AppDecor.t(12, c: AppColors.required)),
-          const SizedBox(height: 16),
-          GradientButton(
-            text: 'Enregistrer la mesure',
-            onPressed: () {
-              if (!_form.currentState!.validate()) return;
-              if (_date.isAfter(DateTime.now())) {
-                setState(
-                  () => _error =
-                      'La date de la mesure ne peut pas être dans le futur.',
-                );
-                return;
-              }
-              if (_pressure &&
-                  _parse(_primary.text)! <= _parse(_secondary.text)!) {
-                setState(
-                  () => _error =
-                      'La systolique doit être supérieure à la diastolique.',
-                );
-                return;
-              }
-              Navigator.pop(
-                context,
-                _MeasurementInput(
-                  _parse(_primary.text)!,
-                  _pressure ? _parse(_secondary.text)! : null,
-                  _date,
-                ),
-              );
-            },
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: AppColors.border)),
+            ),
+            child: GradientButton(
+              text: 'Enregistrer la mesure',
+              isLoading: _busy,
+              onPressed: save,
+            ),
           ),
         ],
       ),

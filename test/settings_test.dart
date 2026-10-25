@@ -1,3 +1,5 @@
+import 'support/api_fixture.dart';
+import 'package:ecare_plus_mobile/services/api_session.dart';
 import 'package:ecare_plus_mobile/models/care_data.dart';
 import 'package:ecare_plus_mobile/views/dashbord/settings_page.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 Future<void> openSettings(WidgetTester tester, CareData data) async {
+  final session = await signedInSession();
+
   await tester.pumpWidget(
-    ChangeNotifierProvider.value(
-      value: data,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<CareData>.value(value: data),
+        ChangeNotifierProvider<ApiSession>(lazy: false, create: (_) => session),
+      ],
       child: MaterialApp(
         home: const Scaffold(body: SettingsPage()),
         routes: {'/login': (_) => const Scaffold(body: Text('Connexion'))},

@@ -10,8 +10,7 @@ import '../../widgets/page_header.dart';
 const _editorialBlue = AppColors.primary;
 
 class ArticlesPage extends StatefulWidget {
-  final bool showBack;
-  const ArticlesPage({super.key, this.showBack = true});
+  const ArticlesPage({super.key});
   @override
   State<ArticlesPage> createState() => _ArticlesPageState();
 }
@@ -125,7 +124,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
                 PageHeader(
                   title: 'Articles',
                   subtitle: 'Un peu de lecture. Beaucoup pour vous.',
-                  showBack: widget.showBack,
+                  showBack: false,
                   action: SizedBox(
                     width: 48,
                     height: 48,
@@ -458,7 +457,7 @@ class _ArticlesPageState extends State<ArticlesPage> {
         const SizedBox(height: 8),
         Text(
           _favoritesOnly
-          ? 'Enregistrez vos articles préférés avec le marque-page, ou explorez un autre thème.'
+              ? 'Enregistrez vos articles préférés avec le marque-page, ou explorez un autre thème.'
               : 'Essayez un autre mot ou un autre thème.',
           textAlign: TextAlign.center,
           style: AppDecor.t(12, c: AppColors.textMuted),
@@ -665,10 +664,10 @@ class _ArticleReaderState extends State<_ArticleReader> {
                             Expanded(
                               child: Text(
                                 source.title,
-                                style: AppDecor.t(
-                                  12,
-                                  c: AppColors.primary,
-                                ).copyWith(decoration: TextDecoration.underline),
+                                style: AppDecor.t(12, c: AppColors.primary)
+                                    .copyWith(
+                                      decoration: TextDecoration.underline,
+                                    ),
                               ),
                             ),
                           ],
@@ -683,13 +682,4 @@ class _ArticleReaderState extends State<_ArticleReader> {
       ),
     );
   }
-}
-
-Future<void> openArticlesPage(BuildContext context) async {
-  await Navigator.push<void>(
-    context,
-    MaterialPageRoute<void>(
-      builder: (_) => const ArticlesPage(),
-    ),
-  );
 }

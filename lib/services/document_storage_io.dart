@@ -4,14 +4,21 @@ import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'document_storage.dart';
 
-DocumentStorage createDocumentStorage() => LocalDocumentStorage();
+DocumentStorage createDocumentStorage({String? patientId}) =>
+    LocalDocumentStorage(patientId: patientId);
 
 class LocalDocumentStorage implements DocumentStorage {
   Directory? _directory;
-  LocalDocumentStorage({Directory? directory}) : _directory = directory;
+  final String? patientId;
+  LocalDocumentStorage({Directory? directory, this.patientId})
+    : _directory = directory == null || patientId == null
+          ? directory
+          : Directory(
+              '${directory.path}/patients/${Uri.encodeComponent(patientId)}',
+            );
   Future<Directory> _root() async {
     final root = _directory ??= Directory(
-      '${(await getApplicationSupportDirectory()).path}/medical-documents',
+      '${(await getApplicationSupportDirectory()).path}/medical-documents${patientId == null ? '' : '/patients/${Uri.encodeComponent(patientId!)}'}',
     );
     await root.create(recursive: true);
     return root;

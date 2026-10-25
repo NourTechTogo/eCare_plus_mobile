@@ -32,11 +32,15 @@ void main() {
     'Reading opens a labelled preview and saved articles survive reopening',
     (tester) async {
       await open(tester);
-      await tester.ensureVisible(find.text('Lire l’aperçu'));
+      await tester.ensureVisible(
+        find.text('Mieux comprendre sa santé, un article à la fois'),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lire l’aperçu'));
+      await tester.tap(
+        find.text('Mieux comprendre sa santé, un article à la fois'),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Aperçu éditorial'), findsOneWidget);
+      expect(find.text('Article'), findsOneWidget);
       await tester.tap(find.byTooltip('Enregistrer cet article').last);
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byTooltip('Retour'));

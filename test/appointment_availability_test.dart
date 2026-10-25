@@ -5,45 +5,57 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+Finder keyPrefix(String prefix) => find.byWidgetPredicate(
+  (w) =>
+      w.key is ValueKey<String> &&
+      (w.key as ValueKey<String>).value.startsWith(prefix),
+);
+Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
+Future<void> chooseDay(WidgetTester tester) async {
+  await tapVisible(tester, keyPrefix('day-').first);
+  await tapVisible(tester, find.text('Suivant'));
+}
+
 void main() {
-  testWidgets('Changing doctor clears the selected slot on a narrow screen', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => CareData(),
-        child: MaterialApp(
-          home: AppointmentsPage(initialDoctor: doctorCatalog.first.name),
+  testWidgets(
+    'Changing local example doctor clears the previously selected day',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => CareData(),
+          child: MaterialApp(
+            home: AppointmentsPage(initialDoctor: doctorCatalog.first.name),
+          ),
         ),
-      ),
-    );
-    final slot = find.byKey(const ValueKey('slot-09:00'));
-    await tester.ensureVisible(slot);
-    await tester.tap(slot);
-    await tester.pumpAndSettle();
-    expect(find.text('Votre consultation'), findsOneWidget);
-    final doctor = find.byKey(ValueKey('doctor-${doctorCatalog.last.name}'));
-    await tester.ensureVisible(doctor);
-    await tester.tap(doctor);
-    await tester.pumpAndSettle();
-    expect(find.text('Votre consultation'), findsNothing);
-    expect(find.byKey(const ValueKey('slot-09:00')), findsNothing);
-    expect(find.byKey(const ValueKey('slot-10:00')), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.byWidgetPredicate((widget) => widget is FilledButton),
-          )
-          .onPressed,
-      isNull,
-    );
-    expect(tester.takeException(), isNull);
-  });
-  testWidgets('Only a listed doctor slot can be added and cannot be reused', (
+      );
+      await tester.pumpAndSettle();
+      await tapVisible(tester, keyPrefix('day-').first);
+      await tapVisible(tester, find.text('Modifier le médecin'));
+      await tapVisible(
+        tester,
+        find.byKey(ValueKey('doctor-${doctorCatalog.last.name}')),
+      );
+      await tapVisible(tester, find.text('Suivant'));
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Suivant'))
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('Jours disponibles'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('Local agenda requires day and time then removes occupied slot', (
     tester,
   ) async {
     final data = CareData();
@@ -55,28 +67,21 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Disponibilités de démonstration'), findsOneWidget);
-    expect(find.text('Choisir une date'), findsNothing);
-    expect(find.text('Choisir une heure'), findsNothing);
-    final slot = find.byKey(const ValueKey('slot-09:00'));
-    await tester.ensureVisible(slot);
-    await tester.tap(slot);
     await tester.pumpAndSettle();
-    final save = find.text('Ajouter ce créneau à mon agenda');
-    await tester.ensureVisible(save);
-    await tester.tap(save);
-    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsNothing);
+    await chooseDay(tester);
+    expect(
+      find.textContaining('ne réservent pas de consultation réelle'),
+      findsOneWidget,
+    );
+    final slot = keyPrefix('slot-').first;
+    final time = (tester.widget(slot).key as ValueKey<String>).value;
+    await tapVisible(tester, slot);
+    await tapVisible(tester, find.text('Ajouter'));
     expect(data.appointments, hasLength(1));
     expect(data.appointments.single.doctor, doctorCatalog.first.name);
-    expect(data.appointments.single.date.hour, 9);
-    expect(data.appointments.single.date.isAfter(DateTime.now()), isTrue);
-    await tester.ensureVisible(find.text('Ajouter un rendez-vous'));
-    await tester.tap(find.text('Ajouter un rendez-vous'));
-    await tester.pumpAndSettle();
-    final chip = tester.widget<ChoiceChip>(
-      find.byKey(const ValueKey('slot-09:00')),
-    );
-    expect(chip.onSelected, isNull);
-    expect(tester.takeException(), isNull);
+    await tapVisible(tester, find.byTooltip('Ajouter un rendez-vous'));
+    await chooseDay(tester);
+    expect(find.byKey(ValueKey(time)), findsNothing);
   });
 }

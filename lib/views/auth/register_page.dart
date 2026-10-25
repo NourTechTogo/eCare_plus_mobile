@@ -6,7 +6,9 @@ import '../../widgets/auth_header.dart';
 import '../../widgets/auth_field.dart';
 import '../../widgets/gradient_button.dart';
 import '../../widgets/legal_consent.dart';
-import '../../services/registration_welcome_service.dart';
+import '../../services/api_session.dart';
+import '../../utils/password_rules.dart';
+import 'package:provider/provider.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -74,19 +76,41 @@ class _RegisterPageState extends State<RegisterPage>
     setState(() => _termsError = !_accept);
     if (!ok || !_accept) return;
     setState(() => _loading = true);
-    // TODO: appel du service d'inscription (téléphone : '+228${_phone.text.trim()}')
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    final firstRegistration =
-        await RegistrationWelcomeService.takeFirstRegistration(_email.text);
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      firstRegistration ? AppRoutes.registrationSuccess : AppRoutes.login,
-      (route) => false,
-      arguments: firstRegistration,
-    );
+    try {
+      await context.read<ApiSession>().request(
+        'POST',
+        '/auth/inscription',
+        public: true,
+        body: {
+          'nom': _lastName.text.trim(),
+          'prenoms': _firstName.text.trim(),
+          'email': _email.text.trim(),
+          'telephone': '+228${_phone.text.trim()}',
+          'motDePasse': _password.text,
+          'consentementAccepte': true,
+          'versionDocument': legalDocumentVersion,
+          'cguLues': true,
+          'confidentialiteLue': true,
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Compte créé. Connectez-vous pour compléter votre dossier.',
+          ),
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   String? _required(String? v) =>
@@ -214,7 +238,7 @@ class _RegisterPageState extends State<RegisterPage>
                                     const SizedBox(height: 16),
                                     AuthField(
                                       label: 'Mot de passe',
-                                      helperText: 'Minimum 8 caractères',
+                                      helperText: newPasswordHint,
                                       controller: _password,
                                       icon: Icons.lock_outline_rounded,
                                       obscureText: _obscure,
@@ -225,20 +249,13 @@ class _RegisterPageState extends State<RegisterPage>
                                           () => _obscure = !_obscure,
                                         ),
                                       ),
-                                      validator: (v) {
-                                        if (v == null || v.isEmpty) {
-                                          return 'Ce champ est obligatoire';
-                                        }
-                                        return v.length < 8
-                                            ? 'Minimum 8 caractères'
-                                            : null;
-                                      },
+                                      validator: validateNewPassword,
                                     ),
                                     _StrengthBar(password: _password.text),
                                     const SizedBox(height: 16),
                                     AuthField(
                                       label: 'Confirmer le mot de passe',
-                                      helperText: 'Minimum 8 caractères',
+                                      helperText: newPasswordHint,
                                       controller: _confirm,
                                       icon: Icons.lock_outline_rounded,
                                       obscureText: _obscureConfirm,
@@ -333,7 +350,7 @@ class _StrengthBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (password.isEmpty) return const SizedBox.shrink();
     var score = 0;
-    if (password.length >= 8) score++;
+    if (validateNewPassword(password) == null) score++;
     if (RegExp(r'[A-Z]').hasMatch(password) &&
         RegExp(r'[a-z]').hasMatch(password)) {
       score++;

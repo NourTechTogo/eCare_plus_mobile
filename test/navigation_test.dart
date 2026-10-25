@@ -1,17 +1,24 @@
+import 'support/care_fixture.dart';
+import 'package:ecare_plus_mobile/models/care_data.dart';
 import 'package:ecare_plus_mobile/main.dart';
 import 'package:ecare_plus_mobile/services/document_library.dart';
 import 'package:ecare_plus_mobile/widgets/raised_navigation_bar.dart';
-import 'package:ecare_plus_mobile/views/onbording/splash_screen.dart';
+
 import 'package:ecare_plus_mobile/views/dashbord/home_page.dart';
 import 'package:ecare_plus_mobile/views/dashbord/articles_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> openHome(WidgetTester tester) async {
-  await tester.pumpWidget(ECarePlusApp(documentLibrary: _EmptyDocuments()));
-  Navigator.of(
-    tester.element(find.byType(SplashScreen)),
-  ).pushReplacementNamed('/home');
+  final data = CareData();
+  final session = await careSession(data);
+  await tester.pumpWidget(
+    ECarePlusApp(
+      session: session,
+      initialData: data,
+      documentLibrary: _EmptyDocuments(),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -58,7 +65,7 @@ void main() {
       const Offset(0, -800),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Planifier'), findsWidgets);
+    expect(find.text('Aucun professionnel affecté'), findsWidgets);
     expect(tester.takeException(), isNull);
     expect(find.text('Accueil').hitTestable(), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -167,27 +174,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Médecins'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Lawson');
-    await tester.pumpAndSettle();
-    expect(find.text('Dr Lawson Jennifer'), findsOneWidget);
-    expect(find.text('Dr Johnson Mike'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(const Duration(seconds: 3));
-  });
-
-  testWidgets('Welcome card is clickable and redirects to articles page', (
-    tester,
-  ) async {
-    await openHome(tester);
-    expect(find.text('Bienvenue'), findsOneWidget);
-    await tester.tap(find.text('Bienvenue'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ArticlesPage), findsOneWidget);
-    expect(find.text('Articles'), findsOneWidget);
-    await tester.tap(find.byTooltip('Retour'));
-    await tester.pumpAndSettle();
-    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.textContaining('Aucun professionnel affecté'), findsOneWidget);
+    expect(find.text('Dr Lawson Jennifer'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 3));

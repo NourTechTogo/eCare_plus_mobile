@@ -1,3 +1,4 @@
+import '../../services/api_session.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/care_data.dart';
@@ -11,6 +12,11 @@ import '../../widgets/settings_section.dart';
 import '../profile/profile_page.dart';
 import '../settings/ecare_page.dart';
 import '../settings/local_data_page.dart';
+import '../settings/server_preferences_page.dart';
+import '../settings/pending_sync_page.dart';
+import '../measurement/measure_notes_page.dart';
+import 'treatments_page.dart';
+import '../profile/reference_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -45,7 +51,7 @@ class SettingsPage extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Quitter votre espace ?'),
         content: const Text(
-          'Les mesures, rendez-vous, messages et la photo de cette session seront effacés. Votre carnet de documents et vos suivis médicaux resteront sur cet appareil.',
+          'Les données affichées seront retirées de la session. Les données serveur restent conservées et votre carnet local sera fermé pour ce compte.',
         ),
         actions: [
           TextButton(
@@ -60,6 +66,20 @@ class SettingsPage extends StatelessWidget {
       ),
     );
     if (exit == true && context.mounted) {
+      try {
+        await context.read<ApiSession>().logout();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Session locale fermée. Révocation serveur non confirmée : $e',
+              ),
+            ),
+          );
+        }
+      }
+      if (!context.mounted) return;
       context.read<CareData>().clear();
       Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
     }
@@ -140,6 +160,56 @@ class SettingsPage extends StatelessWidget {
           SettingsSection(
             title: 'Mon espace',
             children: [
+              SettingsItem(
+                icon: Icons.medication_outlined,
+                title: 'Mes traitements',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TreatmentsPage(),
+                  ),
+                ),
+              ),
+              SettingsItem(
+                icon: Icons.note_outlined,
+                title: 'Notes sur mes mesures',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MeasureNotesPage(),
+                  ),
+                ),
+              ),
+              SettingsItem(
+                icon: Icons.sync,
+                title: 'Synchronisation en attente',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PendingSyncPage(),
+                  ),
+                ),
+              ),
+              SettingsItem(
+                icon: Icons.qr_code,
+                title: 'Mon code de référencement',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ReferencePage(),
+                  ),
+                ),
+              ),
+              SettingsItem(
+                icon: Icons.tune,
+                title: 'Notifications et données du compte',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ServerPreferencesPage(),
+                  ),
+                ),
+              ),
               SettingsItem(
                 icon: Icons.person_outline_rounded,
                 title: 'Mon profil',

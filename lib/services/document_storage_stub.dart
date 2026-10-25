@@ -2,7 +2,8 @@ import 'dart:typed_data';
 import '../models/medical_document.dart';
 import 'document_storage.dart';
 
-DocumentStorage createDocumentStorage() => _UnavailableStorage();
+DocumentStorage createDocumentStorage({String? patientId}) =>
+    _UnavailableStorage();
 
 class _UnavailableStorage implements DocumentStorage {
   Never _unavailable() => throw const DocumentException(

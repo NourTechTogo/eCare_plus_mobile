@@ -5,25 +5,63 @@ import 'package:open_filex/open_filex.dart';
 import '../models/medical_document.dart';
 import 'document_storage.dart';
 import 'document_export_cleanup.dart';
+import 'api_session.dart';
 
 class DocumentLibrary extends ChangeNotifier {
   static final instance = DocumentLibrary();
-  static const extensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
-  static const maxBytes = 20 * 1024 * 1024;
+  static const extensions = ['pdf', 'jpg', 'jpeg', 'png'];
+  static const maxBytes = 5 * 1024 * 1024;
+  final ApiSession? session;
+  bool get remote => session != null;
+  final Map<XFile, String> _pendingSources = {};
   final DocumentStorage storage;
-  DocumentLibrary({DocumentStorage? storage})
-    : storage = storage ?? createDocumentStorage();
+  final String? patientId;
+  final bool locked;
+  bool _closed = false;
+  void lockSession() {
+    _closed = true;
+    _documents = [];
+    _conditions = {};
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_closed) super.notifyListeners();
+  }
+
+  DocumentLibrary({
+    DocumentStorage? storage,
+    this.patientId,
+    this.locked = false,
+    this.session,
+  }) : storage = storage ?? createDocumentStorage(patientId: patientId);
   List<MedicalDocument> _documents = [];
   Set<MedicalCondition> _conditions = {};
   Future<void>? _loading;
   bool loaded = false;
   bool _busy = false;
-  List<MedicalDocument> get documents => List.unmodifiable(_documents);
-  Set<MedicalCondition> get conditions => Set.unmodifiable(_conditions);
+  List<MedicalDocument> get documents =>
+      List.unmodifiable(_closed || locked ? <MedicalDocument>[] : _documents);
+  Set<MedicalCondition> get conditions =>
+      Set.unmodifiable(_closed || locked ? <MedicalCondition>{} : _conditions);
   Future<void> load() => _loading ??= _load();
   Future<void> _load() async {
+    if (locked || _closed) {
+      throw const DocumentException(
+        'Reconnectez-vous pour ouvrir votre carnet.',
+      );
+    }
     try {
+      if (session != null) {
+        final rows = await session!.all('/mobile/me/documents');
+        if (_closed) return;
+        _documents = rows.map(_fromServer).toList();
+        loaded = true;
+        notifyListeners();
+        return;
+      }
       final index = await storage.loadIndex();
+      if (_closed) return;
       _documents = ((index['documents'] ?? []) as List)
           .map(
             (j) =>
@@ -41,6 +79,27 @@ class DocumentLibrary extends ChangeNotifier {
     }
   }
 
+  MedicalDocument _fromServer(Map<String, dynamic> row) => MedicalDocument(
+    id: row['id'] as String,
+    title: row['titre'] as String,
+    fileName: row['nomOriginal'] as String,
+    storageName: '${row['id']}.bin',
+    size: (row['tailleOctets'] as num).toInt(),
+    date: DateTime.parse(row['dateDocument'] as String),
+    category: switch (row['typeDocument']) {
+      'ORDONNANCE' => DocumentCategory.prescription,
+      'RESULTAT_ANALYSE' => DocumentCategory.results,
+      'COMPTE_RENDU' => DocumentCategory.report,
+      _ => DocumentCategory.other,
+    },
+    conditions: {},
+  );
+
+  Future<void> reload() {
+    _loading = null;
+    return load();
+  }
+
   Future<void> _persist(
     List<MedicalDocument> docs,
     Set<MedicalCondition> conditions,
@@ -50,6 +109,7 @@ class DocumentLibrary extends ChangeNotifier {
     'documents': docs.map((d) => d.toJson()).toList(),
   });
   Future<T> _change<T>(Future<T> Function() action) async {
+    if (locked || _closed) throw const DocumentException('Carnet verrouillé.');
     if (_busy) {
       throw const DocumentException(
         'Une opération est déjà en cours. Réessayez dans un instant.',
@@ -58,6 +118,7 @@ class DocumentLibrary extends ChangeNotifier {
     _busy = true;
     try {
       await load();
+      if (_closed) throw const DocumentException('Carnet verrouillé.');
       return await action();
     } finally {
       _busy = false;
@@ -75,20 +136,8 @@ class DocumentLibrary extends ChangeNotifier {
       const XTypeGroup(
         label: 'Documents médicaux',
         extensions: extensions,
-        mimeTypes: [
-          'application/pdf',
-          'image/jpeg',
-          'image/png',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ],
-        uniformTypeIdentifiers: [
-          'com.adobe.pdf',
-          'public.jpeg',
-          'public.png',
-          'com.microsoft.word.doc',
-          'org.openxmlformats.wordprocessingml.document',
-        ],
+        mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+        uniformTypeIdentifiers: ['com.adobe.pdf', 'public.jpeg', 'public.png'],
       ),
     ],
   );
@@ -102,22 +151,50 @@ class DocumentLibrary extends ChangeNotifier {
     final fileName = file.name.split(RegExp(r'[/\\]')).last;
     final ext = fileName.split('.').last.toLowerCase();
     if (!extensions.contains(ext)) {
-      throw const DocumentException(
-        'Choisissez un PDF, une image JPG/PNG ou un document Word.',
-      );
+      throw const DocumentException('Choisissez un PDF ou une image JPG/PNG.');
     }
     if (title.trim().isEmpty) {
       throw const DocumentException('Donnez un nom au document.');
     }
     if (await file.length() > maxBytes) {
-      throw const DocumentException('Le fichier doit faire moins de 20 Mo.');
+      throw const DocumentException('Le fichier doit faire moins de 5 Mo.');
     }
     final bytes = await file.readAsBytes();
     if (bytes.isEmpty) throw const DocumentException('Ce fichier est vide.');
     if (bytes.length > maxBytes) {
-      throw const DocumentException('Le fichier doit faire moins de 20 Mo.');
+      throw const DocumentException('Le fichier doit faire moins de 5 Mo.');
     }
     final id = DateTime.now().microsecondsSinceEpoch.toString();
+    if (session != null) {
+      try {
+        final source = _pendingSources.putIfAbsent(file, () => 'document-$id');
+        final row = await session!.upload(
+          '/mobile/me/documents',
+          bytes: bytes,
+          fileName: fileName,
+          fields: {
+            'titre': title.trim(),
+            'typeDocument': switch (category) {
+              DocumentCategory.prescription => 'ORDONNANCE',
+              DocumentCategory.results => 'RESULTAT_ANALYSE',
+              DocumentCategory.report => 'COMPTE_RENDU',
+              DocumentCategory.other => 'AUTRE',
+            },
+            'dateDocument':
+                '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+            'sourceRef': source,
+          },
+        );
+        if (_closed) throw const DocumentException('Carnet verrouillé.');
+        final item = _fromServer(row);
+        _documents = [..._documents.where((d) => d.id != item.id), item];
+        _pendingSources.remove(file);
+        notifyListeners();
+        return item;
+      } on ApiException catch (e) {
+        throw DocumentException(e.message);
+      }
+    }
     final item = MedicalDocument(
       id: id,
       title: title.trim(),
@@ -147,6 +224,7 @@ class DocumentLibrary extends ChangeNotifier {
     String query = '',
     bool oldestFirst = false,
   }) {
+    if (_closed || locked) return [];
     final search = query.trim().toLowerCase();
     final result = _documents
         .where(
@@ -167,9 +245,20 @@ class DocumentLibrary extends ChangeNotifier {
     return result;
   }
 
-  Future<Uint8List> read(MedicalDocument item) =>
-      storage.read(item.storageName);
+  Future<Uint8List> read(MedicalDocument item) {
+    if (locked || _closed) throw const DocumentException('Carnet verrouillé.');
+    if (session != null) {
+      return session!.bytes('/mobile/me/documents/${item.id}/contenu');
+    }
+    return storage.read(item.storageName);
+  }
+
   Future<void> open(MedicalDocument item) async {
+    if (locked || _closed) throw const DocumentException('Carnet verrouillé.');
+    if (session != null) {
+      await export(item);
+      return;
+    }
     final result = await OpenFilex.open(await storage.path(item.storageName));
     if (result.type != ResultType.done) {
       throw const DocumentException(
@@ -206,6 +295,17 @@ class DocumentLibrary extends ChangeNotifier {
   }
 
   Future<void> remove(MedicalDocument item) => _change(() async {
+    if (session != null) {
+      try {
+        await session!.request('DELETE', '/mobile/me/documents/${item.id}');
+      } on ApiException catch (e) {
+        throw DocumentException(e.message);
+      }
+      if (_closed) return;
+      _documents = _documents.where((d) => d.id != item.id).toList();
+      notifyListeners();
+      return;
+    }
     final next = _documents.where((d) => d.id != item.id).toList();
     await _persist(next, _conditions);
     _documents = next;

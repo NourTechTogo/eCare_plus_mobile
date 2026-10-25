@@ -24,9 +24,13 @@ class SocialAuthRow extends StatelessWidget {
             const Expanded(child: Divider(color: AppColors.border)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Text(title,
-                  style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textHint, fontSize: 13)),
+              child: Text(
+                title,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textHint,
+                  fontSize: 13,
+                ),
+              ),
             ),
             const Expanded(child: Divider(color: AppColors.border)),
           ],
@@ -93,10 +97,13 @@ class _Pill extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: iconSize),
               const SizedBox(width: 8),
-              Text(label,
-                  style: AppTextStyles.label.copyWith(
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: AppTextStyles.label.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),

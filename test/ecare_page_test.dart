@@ -39,7 +39,7 @@ void main() {
       await tester.tap(find.text('Ajouter et retrouver un document'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('PDF, images et fichiers Word'),
+        find.textContaining('PDF, JPG et PNG jusqu’à 5 Mo'),
         findsOneWidget,
       );
       await tester.scrollUntilVisible(
@@ -65,7 +65,7 @@ void main() {
       expect(find.text('Documents et suivis médicaux'), findsOneWidget);
       expect(find.text('Mesures et agenda'), findsOneWidget);
       expect(
-        find.textContaining('vous déconnecter ne supprime pas'),
+        find.textContaining('séparé par identifiant patient'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

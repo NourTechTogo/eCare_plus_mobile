@@ -1,15 +1,18 @@
+import 'support/care_fixture.dart';
 import 'package:ecare_plus_mobile/main.dart';
 import 'package:ecare_plus_mobile/models/care_data.dart';
-import 'package:ecare_plus_mobile/views/onbording/splash_screen.dart';
+import 'package:ecare_plus_mobile/views/dashbord/home_page.dart';
 import 'package:ecare_plus_mobile/widgets/measurement_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   Future<void> open(WidgetTester tester, CareData data, String route) async {
-    await tester.pumpWidget(ECarePlusApp(initialData: data));
+    final session = await careSession(data);
+    await tester.pumpWidget(ECarePlusApp(initialData: data, session: session));
+    await tester.pumpAndSettle();
     Navigator.of(
-      tester.element(find.byType(SplashScreen)),
+      tester.element(find.byType(HomePage)),
     ).pushReplacementNamed(route);
     await tester.pumpAndSettle();
   }
@@ -54,6 +57,7 @@ void main() {
         if (pressure) {
           await tester.enterText(find.byType(TextFormField).last, '82');
         }
+        await tester.ensureVisible(find.text('Enregistrer la mesure'));
         await tester.tap(find.text('Enregistrer la mesure'));
         await tester.pumpAndSettle();
         expect(data.readings.length, pressure ? 2 : 3);

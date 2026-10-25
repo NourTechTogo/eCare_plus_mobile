@@ -35,7 +35,11 @@ class _DocumentsPageState extends State<DocumentsPage> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      await _library.load();
+      if (_library.remote) {
+        await _library.reload();
+      } else {
+        await _library.load();
+      }
     } catch (e) {
       if (mounted) {
         setState(
@@ -81,7 +85,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
     final file = await _library.pickFile();
     if (file == null || !mounted) return;
     if (await file.length() > DocumentLibrary.maxBytes) {
-      throw const DocumentException('Le fichier doit faire moins de 20 Mo.');
+      throw const DocumentException('Le fichier doit faire moins de 5 Mo.');
     }
     if (!mounted) return;
     setState(() => _importSheetOpen = true);

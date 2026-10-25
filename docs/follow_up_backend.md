@@ -1,3 +1,5 @@
+> Document conservé des étapes précédentes. Voir [la validation de livraison](../VALIDATION.md) pour les résultats et limites à la publication. Les fichiers `.maintenance` cités ne sont pas inclus.
+
 # Pages de suivi et futur branchement backend
 
 Les trois pages réutilisent le même écran et les mêmes composants de saisie,

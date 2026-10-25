@@ -4,6 +4,7 @@ import '../../utils/app_decor.dart';
 import '../../utils/app_colors.dart';
 import '../../widgets/care_page.dart';
 import '../../widgets/settings_section.dart';
+import 'local_archive_page.dart';
 
 class LocalDataPage extends StatelessWidget {
   const LocalDataPage({super.key});
@@ -17,24 +18,34 @@ class LocalDataPage extends StatelessWidget {
         _card(
           'Documents et suivis médicaux',
           Icons.folder_copy_outlined,
-          'Les fichiers de votre carnet et les pathologies sélectionnées sont enregistrés sur cet appareil. Fermer l’application ou vous déconnecter ne supprime pas ces éléments. Vous pouvez retirer un document depuis son menu dans le carnet.',
+          'Le carnet principal utilise le serveur commun et ses accès privés. Le carnet local historique est séparé par identifiant patient et conservé sur cet appareil. Sa transmission est volontaire depuis les archives locales. Les fichiers historiques non attribués à un compte ne sont pas migrés automatiquement.',
         ),
         const SizedBox(height: 16),
         _card(
           'Mesures et agenda',
           Icons.timeline_rounded,
-          'Les mesures, rendez-vous, messages du chat et photo de profil sont conservés pendant la session active. Ils sont effacés à la déconnexion et ne sont pas restaurés après un redémarrage de l’application. Les fichiers choisis pour un message peuvent aussi avoir une copie temporaire gérée par le téléphone.',
+          'Le profil, les mesures et les messages texte confirmés sont conservés par le serveur et rechargés après connexion. Le jeton reste uniquement en mémoire : un redémarrage impose une nouvelle connexion. Les données affichées sont retirées à la déconnexion. L’agenda personnel reste local à la session ; il ne réserve pas de consultation.',
         ),
         const SizedBox(height: 16),
         _card(
           'Export et partage',
           Icons.file_download_outlined,
-          'Télécharger un document crée une copie à l’emplacement choisi. Retirer le document du carnet ne supprime ni cette copie ni le fichier d’origine. Aucun document du carnet n’est envoyé automatiquement à un médecin.',
+          'Télécharger un document crée une copie à l’emplacement choisi. Les documents transmis au serveur sont accessibles aux professionnels habilités du dossier. Retirer un document serveur ne supprime ni vos exports ni les originaux locaux.',
         ),
         const SizedBox(height: 22),
         SettingsSection(
           title: 'Gérer mes informations',
           children: [
+            SettingsItem(
+              icon: Icons.archive_outlined,
+              title: 'Archives locales conservées',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const LocalArchivePage(),
+                ),
+              ),
+            ),
             SettingsItem(
               icon: Icons.folder_outlined,
               title: 'Ouvrir mon carnet',

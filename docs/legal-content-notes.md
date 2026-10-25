@@ -1,3 +1,5 @@
+> Document conservé des étapes précédentes. Voir [la validation de livraison](../VALIDATION.md) pour les résultats et limites à la publication. Les fichiers `.maintenance` cités ne sont pas inclus.
+
 # Textes d’information et d’utilisation
 
 Les pages dans `lib/views/legal` décrivent le fonctionnement observable de la version de développement au 16 octobre 2026. Elles présentent un document continu avec titres et paragraphes développés, sans carte distincte pour chaque section. Elles ne prétendent pas être des documents juridiques définitifs.

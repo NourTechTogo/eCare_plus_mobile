@@ -86,7 +86,7 @@ void main() {
   test('Rejects empty and unsupported files without adding a record', () async {
     await expectLater(
       library.importFile(
-          XFile.fromData(Uint8List(0), path: 'empty.pdf'),
+        XFile.fromData(Uint8List(0), path: 'empty.pdf'),
         title: 'Vide',
         category: DocumentCategory.other,
         conditions: {},
@@ -96,7 +96,7 @@ void main() {
     );
     await expectLater(
       library.importFile(
-          XFile.fromData(Uint8List.fromList([1]), path: 'bad.exe'),
+        XFile.fromData(Uint8List.fromList([1]), path: 'bad.exe'),
         title: 'Invalide',
         category: DocumentCategory.other,
         conditions: {},

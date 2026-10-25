@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CareDoctor {
+  final String? serverId;
   final String name;
   final String specialty;
   final IconData icon;
@@ -24,7 +25,18 @@ class CareDoctor {
     this.facebookUrl,
     this.tiktokUrl,
     this.isDemo = true,
+    this.serverId,
   });
+
+  factory CareDoctor.fromServer(Map<String, dynamic> row) => CareDoctor(
+    '${row['prenoms'] ?? ''} ${row['nom'] ?? ''}'.trim(),
+    '${row['specialite'] ?? 'Professionnel de santé'}',
+    Icons.medical_services_outlined,
+    const Color(0xFFE4F2FF),
+    'lib/data/Icon_medecin.png',
+    serverId: '${row['id']}',
+    isDemo: false,
+  );
 }
 
 class DoctorCareerStep {

@@ -1,3 +1,5 @@
+import 'package:ecare_plus_mobile/services/api_session.dart';
+import 'support/care_fixture.dart';
 import 'package:ecare_plus_mobile/models/care_data.dart';
 import 'package:ecare_plus_mobile/views/measurement/follow_up_page.dart';
 import 'package:ecare_plus_mobile/widgets/measurement_chart.dart';
@@ -6,9 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 Future<void> openFollowUp(WidgetTester tester, CareData data) async {
+  final session = await careSession(data);
+
   await tester.pumpWidget(
-    ChangeNotifierProvider.value(
-      value: data,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ApiSession>(lazy: false, create: (_) => session),
+        ChangeNotifierProvider<CareData>.value(value: data),
+      ],
       child: const MaterialApp(home: FollowUpPage()),
     ),
   );
@@ -88,6 +95,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).at(0), '120');
     await tester.enterText(find.byType(TextFormField).at(1), '80');
+    await tester.ensureVisible(find.text('Enregistrer la mesure'));
     await tester.tap(find.text('Enregistrer la mesure'));
     await tester.pumpAndSettle();
     expect(data.bloodPressureReadings.single.systolic, 120);

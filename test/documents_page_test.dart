@@ -171,7 +171,7 @@ void main() {
     (tester) async {
       await start(tester);
       await tester.runAsync(() async {
-        await tester.tap(find.text('Ajouter un document'));
+        await tester.tap(find.byTooltip('Ajouter un document'));
         await Future<void>.delayed(const Duration(milliseconds: 120));
       });
       await tester.pumpAndSettle();

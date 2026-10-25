@@ -22,7 +22,6 @@ class AppRoutes {
   static const String documents = '/documents';
   static const String treatments = '/treatments';
   static const String doctors = '/doctors';
-  static const String articles = '/articles';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';
   static const String about = '/ecare-plus';

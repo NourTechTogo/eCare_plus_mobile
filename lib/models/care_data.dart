@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'doctor_message.dart';
+import '../services/api_session.dart';
+import '../services/sync_queue.dart';
 
 enum NotificationCategory { medication, appointment, measurement, alert }
 
@@ -41,6 +43,102 @@ class BloodPressureReading {
 
 /// Local session data until the patient services are connected.
 class CareData extends ChangeNotifier {
+  SyncQueue? syncQueue;
+  ApiSession? _session;
+  String? _account;
+  String? syncError;
+  List<Map<String, dynamic>> measurements = [];
+  void bind(ApiSession session) {
+    _session = session;
+    final account = session.authenticated ? session.userId : null;
+    if (_account == account) return;
+    syncQueue?.removeListener(notifyListeners);
+    syncQueue?.dispose();
+    syncQueue = account == null ? null : SyncQueue(session);
+    syncQueue?.addListener(notifyListeners);
+    _account = account;
+    clear();
+    if (account != null) refresh();
+  }
+
+  Future<void> refresh() async {
+    final session = _session;
+    if (session == null || !session.authenticated) return;
+    final generation = session.generation;
+    try {
+      final rows = await session.all('/mobile/me/mesures');
+      if (generation != session.generation) return;
+      measurements = rows;
+      _readings.clear();
+      _bloodPressureReadings.clear();
+      for (final row in rows) {
+        final date = DateTime.parse(row['dateMesure'] as String).toLocal();
+        final value = (row['valeurPrincipale'] as num).toDouble();
+        if (row['typeMesure'] == 'GLYCEMIE') {
+          _readings.add(GlucoseReading(value: value, date: date));
+        } else if (row['typeMesure'] == 'TENSION_ARTERIELLE') {
+          _bloodPressureReadings.add(
+            BloodPressureReading(
+              systolic: value,
+              diastolic: (row['valeurSecondaire'] as num).toDouble(),
+              date: date,
+            ),
+          );
+        }
+      }
+      _readings.sort((a, b) => b.date.compareTo(a.date));
+      _bloodPressureReadings.sort((a, b) => b.date.compareTo(a.date));
+      syncError = null;
+    } catch (e) {
+      if (generation != session.generation) return;
+      syncError = e.toString();
+    }
+    notifyListeners();
+  }
+
+  Future<void> submitMeasurement(
+    String type,
+    double value,
+    String unit, {
+    double? secondary,
+    DateTime? date,
+    String? sourceRef,
+  }) async {
+    final session = _session;
+    if (session == null) {
+      throw const ApiException('Connectez-vous pour transmettre une mesure.');
+    }
+    final key =
+        sourceRef ?? 'measurement-${DateTime.now().microsecondsSinceEpoch}';
+    final body = <String, dynamic>{
+      'typeMesure': type,
+      'valeurPrincipale': value,
+      'valeurSecondaire': ?secondary,
+      'unite': unit,
+      'dateMesure': (date ?? DateTime.now()).toUtc().toIso8601String(),
+      'sourceRef': key,
+    };
+    try {
+      await session.request('POST', '/mobile/me/mesures', body: body);
+    } on ApiException catch (e) {
+      if (e.status == null || e.status == 503) {
+        syncQueue?.enqueueDirectMeasurement(key, body);
+        throw const ApiException(
+          'Transmission non confirmée. Mesure conservée dans la file de cette session : ouvrez Paramètres > Synchronisation pour réessayer avant de fermer l’application.',
+        );
+      }
+      rethrow;
+    }
+    await refresh();
+  }
+
+  @override
+  void dispose() {
+    syncQueue?.removeListener(notifyListeners);
+    syncQueue?.dispose();
+    super.dispose();
+  }
+
   final Map<String, List<DoctorMessage>> _conversations = {};
   final Set<String> _blockedDoctors = {};
 
@@ -142,6 +240,8 @@ class CareData extends ChangeNotifier {
   }
 
   void clear() {
+    measurements = [];
+    syncError = null;
     _conversations.clear();
     _blockedDoctors.clear();
     _profilePhoto = null;
