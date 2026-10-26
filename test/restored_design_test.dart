@@ -34,6 +34,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Essai');
+    await tester.pump();
     for (var i = 0; i < 2; i++) {
       await tester.tap(find.byTooltip('Envoyer'));
       await tester.pumpAndSettle();

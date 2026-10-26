@@ -7,7 +7,7 @@ Future<void> deleteTemporaryRecording(String path) async {
   final name = file.uri.pathSegments.last;
   if (file.parent.absolute.path == Directory(directory.path).absolute.path &&
       name.startsWith('ecare-vocal-') &&
-      name.endsWith('.m4a') &&
+      (name.endsWith('.m4a') || name.endsWith('.wav')) &&
       await file.exists()) {
     await file.delete();
   }

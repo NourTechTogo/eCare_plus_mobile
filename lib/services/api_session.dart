@@ -92,6 +92,11 @@ class ApiSession extends ChangeNotifier {
       'pdf' => 'application/pdf',
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',
+      'wav'
+          when RegExp(
+            r'^/mobile/conversations/[^/]+/pieces-jointes$',
+          ).hasMatch(path) =>
+        'audio/wav',
       _ => throw const ApiException('Formats autorisés : PDF, JPG et PNG.'),
     };
     req.files.add(

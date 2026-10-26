@@ -16,17 +16,22 @@ import 'package:file_selector/file_selector.dart';
 import '../../services/private_files.dart';
 import '../../widgets/target_notes.dart';
 import 'server_calls_page.dart';
+import '../../services/chat_media_service.dart';
+import '../../services/server_voice_service.dart';
+import '../../widgets/server_voice_bubble.dart';
 
 class ServerChatPage extends StatefulWidget {
   final String conversationId, doctorName;
   final CareDoctor? doctor;
   final bool returnToCall;
+  final ChatMediaService? mediaService;
   const ServerChatPage({
     super.key,
     required this.conversationId,
     required this.doctorName,
     this.doctor,
     this.returnToCall = false,
+    this.mediaService,
   });
   @override
   State<ServerChatPage> createState() => _ServerChatPageState();
@@ -38,10 +43,32 @@ class _ServerChatPageState extends State<ServerChatPage>
   final search = TextEditingController();
   final scroll = ScrollController();
   bool searching = false, showEmojis = false;
+  late final ServerVoiceService voice;
+  void voiceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> openContact() async {
+    await voice.suspend();
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => DoctorContactPage(doctor: doctor),
+      ),
+    );
+  }
+
   CareDoctor get doctor =>
       widget.doctor ?? CareDoctor.fromServer({'nom': widget.doctorName});
 
-  void openCalls([String? type]) {
+  Future<void> openCalls([String? type]) async {
+    if (voice.active) {
+      await voice.cancel();
+    } else {
+      await voice.pausePlayback();
+    }
+    if (!mounted) return;
     if (widget.returnToCall) {
       Navigator.pop(context);
       return;
@@ -65,7 +92,12 @@ class _ServerChatPageState extends State<ServerChatPage>
   bool sending = false, loading = false;
   final List<Map<String, dynamic>> attachments = [];
   Future<void> attach({bool camera = false}) async {
-    if (sending || attachments.length >= 5) return;
+    if (sending ||
+        voice.active ||
+        voice.draft != null ||
+        attachments.length >= 5) {
+      return;
+    }
     try {
       final file = camera
           ? await ImagePicker().pickImage(source: ImageSource.camera)
@@ -110,6 +142,12 @@ class _ServerChatPageState extends State<ServerChatPage>
   @override
   void initState() {
     super.initState();
+    voice = ServerVoiceService(
+      api: context.read<ApiSession>(),
+      conversationId: widget.conversationId,
+      media: widget.mediaService,
+    );
+    voice.addListener(voiceChanged);
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(load);
     start();
@@ -129,6 +167,11 @@ class _ServerChatPageState extends State<ServerChatPage>
       load();
     } else {
       timer?.cancel();
+      // Une boîte de permission rend temporairement l'écran inactif.
+      // Un passage réel en arrière-plan annule toujours la demande en attente.
+      if (s != AppLifecycleState.inactive || !voice.starting) {
+        unawaited(voice.suspend());
+      }
     }
   }
 
@@ -176,6 +219,11 @@ class _ServerChatPageState extends State<ServerChatPage>
 
   String? submissionFingerprint, submissionSource;
   Future<void> send() async {
+    if (voice.draft != null) {
+      if (await voice.send()) await load();
+      return;
+    }
+    if (voice.active || voice.sending) return;
     final draft = text.text.trim();
     if ((draft.isEmpty && attachments.isEmpty) || sending) return;
     if (draft.length > 2000) {
@@ -230,6 +278,8 @@ class _ServerChatPageState extends State<ServerChatPage>
   @override
   void dispose() {
     timer?.cancel();
+    voice.removeListener(voiceChanged);
+    voice.dispose();
     WidgetsBinding.instance.removeObserver(this);
     text.dispose();
     search.dispose();
@@ -240,7 +290,9 @@ class _ServerChatPageState extends State<ServerChatPage>
   Widget composerIcon(String tooltip, IconData icon, VoidCallback action) =>
       IconButton(
         tooltip: tooltip,
-        onPressed: sending ? null : action,
+        onPressed: sending || voice.active || voice.draft != null
+            ? null
+            : action,
         constraints: const BoxConstraints.tightFor(width: 44, height: 48),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
@@ -286,23 +338,40 @@ class _ServerChatPageState extends State<ServerChatPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if ('${message['contenu'] ?? ''}'.isNotEmpty)
+                  if ('${message['contenu'] ?? ''}'.isNotEmpty &&
+                      !(message['contenu'] == 'Pièce jointe' &&
+                          (message['piecesJointes'] as List? ?? [])
+                              .isNotEmpty &&
+                          (message['piecesJointes'] as List).every(
+                            (p) => p['typeMime'] == 'audio/wav',
+                          )))
                     Text(
                       '${message['contenu']}',
                       style: AppDecor.t(13, c: color, h: 1.45),
                     ),
                   for (final raw in (message['piecesJointes'] as List? ?? []))
-                    TextButton.icon(
-                      onPressed: () =>
-                          download(Map<String, dynamic>.from(raw as Map)),
-                      style: TextButton.styleFrom(foregroundColor: color),
-                      icon: const Icon(Icons.insert_drive_file_outlined),
-                      label: Text(
-                        '${raw['nomOriginal']}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    if (raw['typeMime'] == 'audio/wav')
+                      ServerVoiceBubble(
+                        key: ValueKey(raw['id']),
+                        voice: voice,
+                        pieceId: '${raw['id']}',
+                        duration: Duration(
+                          milliseconds: (raw['dureeMs'] as num?)?.toInt() ?? 0,
+                        ),
+                        color: color,
+                      )
+                    else
+                      TextButton.icon(
+                        onPressed: () =>
+                            download(Map<String, dynamic>.from(raw as Map)),
+                        style: TextButton.styleFrom(foregroundColor: color),
+                        icon: const Icon(Icons.insert_drive_file_outlined),
+                        label: Text(
+                          '${raw['nomOriginal']}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -364,12 +433,7 @@ class _ServerChatPageState extends State<ServerChatPage>
           ),
           titleSpacing: 0,
           title: InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => DoctorContactPage(doctor: doctor),
-              ),
-            ),
+            onTap: openContact,
             borderRadius: BorderRadius.circular(12),
             child: Row(
               children: [
@@ -453,12 +517,7 @@ class _ServerChatPageState extends State<ServerChatPage>
               onSelected: (value) {
                 if (value == 'search') setState(() => searching = true);
                 if (value == 'contact') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => DoctorContactPage(doctor: doctor),
-                    ),
-                  );
+                  unawaited(openContact());
                 }
                 if (value == 'calls') openCalls();
                 if (value == 'info') {
@@ -520,7 +579,7 @@ class _ServerChatPageState extends State<ServerChatPage>
                 Material(
                   color: AppColors.primary,
                   child: InkWell(
-                    onTap: () => Navigator.pop(context),
+                    onTap: openCalls,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -581,6 +640,19 @@ class _ServerChatPageState extends State<ServerChatPage>
                   ),
                   child: Text(
                     error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              if (voice.error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    voice.error!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -669,110 +741,179 @@ class _ServerChatPageState extends State<ServerChatPage>
                     ],
                   ),
                 ),
-              Container(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            composerIcon(
-                              showEmojis
-                                  ? 'Afficher le clavier'
-                                  : 'Choisir un emoji',
-                              showEmojis
-                                  ? Icons.keyboard_outlined
-                                  : Icons.emoji_emotions_outlined,
-                              () {
-                                FocusScope.of(context).unfocus();
-                                setState(() => showEmojis = !showEmojis);
-                              },
-                            ),
-                            Expanded(
-                              child: TextField(
-                                controller: text,
-                                minLines: 1,
-                                maxLines:
-                                    MediaQuery.viewInsetsOf(context).bottom > 0
-                                    ? 2
-                                    : 4,
-                                onChanged: (_) => setState(() {}),
-                                onTap: () {
-                                  if (showEmojis) {
-                                    setState(() => showEmojis = false);
-                                  }
-                                },
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'Message',
-                                  hintMaxLines: 1,
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 2,
-                                    vertical: 12,
-                                  ),
-                                  hintStyle: TextStyle(
-                                    fontSize: 14,
-                                    color: AppColors.textHint,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            composerIcon(
-                              'Joindre un PDF ou une image',
-                              Icons.attach_file_rounded,
-                              () => attach(),
-                            ),
-                            composerIcon(
-                              'Prendre une photo',
-                              Icons.camera_alt_outlined,
-                              () => attach(camera: true),
-                            ),
-                          ],
-                        ),
+              if (voice.active || voice.draft != null)
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Annuler le vocal',
+                        onPressed: voice.sending ? null : voice.cancel,
+                        icon: const Icon(Icons.delete_outline),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      tooltip: 'Envoyer',
-                      onPressed: sending ? null : send,
-                      style: IconButton.styleFrom(
-                        minimumSize: const Size(52, 52),
-                        shape: const CircleBorder(),
-                        backgroundColor: const Color(0xFF228FA9),
-                        foregroundColor: Colors.white,
-                      ),
-                      icon: sending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.send_rounded),
-                    ),
-                  ],
+                      if (voice.draft != null)
+                        Expanded(
+                          child: ServerVoiceBubble(
+                            key: ValueKey(voice.draft),
+                            voice: voice,
+                            draft: voice.draft,
+                            duration: voice.draft!.duration,
+                            color: AppColors.primaryDeep,
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: Text(
+                            voice.starting
+                                ? 'Autorisation du microphone…'
+                                : voice.stopping
+                                ? 'Préparation du vocal…'
+                                : 'Enregistrement ${voiceTime(voice.elapsed)} · 2 min max.',
+                          ),
+                        ),
+                      if (voice.recording)
+                        IconButton(
+                          tooltip: 'Arrêter le vocal',
+                          onPressed: voice.stop,
+                          icon: const Icon(
+                            Icons.stop_circle_outlined,
+                            color: Colors.red,
+                          ),
+                        )
+                      else if (voice.draft != null)
+                        TextButton(
+                          onPressed: voice.sending ? null : send,
+                          child: Text(voice.sending ? 'Envoi…' : 'Envoyer'),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+              if (!voice.active && voice.draft == null)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              composerIcon(
+                                showEmojis
+                                    ? 'Afficher le clavier'
+                                    : 'Choisir un emoji',
+                                showEmojis
+                                    ? Icons.keyboard_outlined
+                                    : Icons.emoji_emotions_outlined,
+                                () {
+                                  FocusScope.of(context).unfocus();
+                                  setState(() => showEmojis = !showEmojis);
+                                },
+                              ),
+                              Expanded(
+                                child: TextField(
+                                  controller: text,
+                                  minLines: 1,
+                                  maxLines:
+                                      MediaQuery.viewInsetsOf(context).bottom >
+                                          0
+                                      ? 2
+                                      : 4,
+                                  onChanged: (_) => setState(() {}),
+                                  onTap: () {
+                                    if (showEmojis) {
+                                      setState(() => showEmojis = false);
+                                    }
+                                  },
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Message',
+                                    hintMaxLines: 1,
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                      vertical: 12,
+                                    ),
+                                    hintStyle: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textHint,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              composerIcon(
+                                'Joindre un PDF ou une image',
+                                Icons.attach_file_rounded,
+                                () => attach(),
+                              ),
+                              composerIcon(
+                                'Prendre une photo',
+                                Icons.camera_alt_outlined,
+                                () => attach(camera: true),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        tooltip: text.text.trim().isEmpty && attachments.isEmpty
+                            ? 'Message vocal'
+                            : 'Envoyer',
+                        onPressed: sending
+                            ? null
+                            : text.text.trim().isEmpty && attachments.isEmpty
+                            ? () {
+                                if (widget.returnToCall) {
+                                  setState(
+                                    () => error =
+                                        'Terminez l’appel avant d’enregistrer un vocal.',
+                                  );
+                                } else {
+                                  unawaited(voice.start());
+                                }
+                              }
+                            : send,
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(52, 52),
+                          shape: const CircleBorder(),
+                          backgroundColor: const Color(0xFF228FA9),
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: sending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(
+                                text.text.trim().isEmpty && attachments.isEmpty
+                                    ? Icons.mic_rounded
+                                    : Icons.send_rounded,
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
               if (showEmojis)
                 SizedBox(
                   height: MediaQuery.sizeOf(context).height * .3,

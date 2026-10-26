@@ -18,7 +18,13 @@ class ChatMediaException implements Exception {
 /// Device media only. This service does not transmit anything to a doctor.
 class ChatMediaService {
   final String? doctorName;
-  ChatMediaService({this.doctorName});
+  final bool voiceWav;
+  ChatMediaService({this.doctorName, this.voiceWav = false});
+  bool _disposed = false;
+  int _recordEpoch = 0;
+  Future<bool>? _starting;
+  bool _permissionPending = false;
+  String? _recordPath;
   static const pendingPhotoKey = 'chat.pendingPhotoDoctor';
   AudioRecorder? _recorder;
   final _players = <VoicePlayback>{};
@@ -112,20 +118,44 @@ class ChatMediaService {
         .map((amplitude) => amplitude.current);
   }
 
-  Future<bool> startRecording() async {
+  Future<bool> startRecording() {
+    final task = _startRecording(++_recordEpoch);
+    _starting = task;
+    return task;
+  }
+
+  Future<bool> _startRecording(int epoch) async {
+    if (_disposed) return false;
     final recorder = _recorder ??= AudioRecorder();
-    if (!await recorder.hasPermission()) return false;
+    _permissionPending = true;
+    bool allowed;
+    try {
+      allowed = await recorder.hasPermission();
+    } finally {
+      _permissionPending = false;
+    }
+    if (!allowed) return false;
+    if (_disposed || epoch != _recordEpoch) return false;
+    final wav = voiceWav || kIsWeb;
     final path = kIsWeb
         ? ''
-        : '${(await getTemporaryDirectory()).path}/ecare-vocal-${DateTime.now().microsecondsSinceEpoch}.m4a';
+        : '${(await getTemporaryDirectory()).path}/ecare-vocal-${DateTime.now().microsecondsSinceEpoch}.${wav ? 'wav' : 'm4a'}';
+    if (_disposed || epoch != _recordEpoch) return false;
+    _recordPath = path;
     await recorder.start(
       RecordConfig(
-        encoder: kIsWeb ? AudioEncoder.wav : AudioEncoder.aacLc,
+        encoder: wav ? AudioEncoder.wav : AudioEncoder.aacLc,
         numChannels: 1,
+        sampleRate: voiceWav ? 16000 : 44100,
         bitRate: 64000,
       ),
       path: path,
     );
+    if (_disposed || epoch != _recordEpoch) {
+      final discarded = await recorder.stop();
+      await deleteTemporaryRecording(discarded ?? path);
+      return false;
+    }
     _clock
       ..reset()
       ..start();
@@ -143,22 +173,36 @@ class ChatMediaService {
         text: 'Message vocal',
         kind: DoctorMessageKind.voice,
         bytes: bytes,
-        mimeType: kIsWeb ? 'audio/wav' : 'audio/mp4',
+        mimeType: voiceWav || kIsWeb ? 'audio/wav' : 'audio/mp4',
         duration: duration,
       );
     } finally {
-      if (!kIsWeb) await deleteTemporaryRecording(path);
+      await deleteTemporaryRecording(path);
+      _recordPath = null;
     }
   }
 
   Future<void> cancelRecording() async {
+    _recordEpoch++;
     _clock.stop();
-    await _recorder?.cancel();
+    // Le plugin sérialise ses appels : ne pas bloquer la navigation derrière
+    // une boîte de permission. Le démarrage vérifie l'époque à son retour.
+    if (_permissionPending) return;
+    final path = await _recorder?.stop() ?? _recordPath;
+    _recordPath = null;
+    if (path != null) await deleteTemporaryRecording(path);
   }
 
   VoicePlayback createPlayback() {
     late final VoicePlayback player;
-    player = VoicePlayback(onDisposed: () => _players.remove(player));
+    player = VoicePlayback(
+      onDisposed: () => _players.remove(player),
+      beforePlay: () async {
+        for (final other in _players.toList()) {
+          if (other != player) await other.pause();
+        }
+      },
+    );
     _players.add(player);
     return player;
   }
@@ -184,9 +228,21 @@ class ChatMediaService {
   }
 
   Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    _recordEpoch++;
+    for (final player in _players.toList()) {
+      await player.dispose();
+    }
+    try {
+      await _starting;
+    } catch (_) {}
     final recorder = _recorder;
     if (recorder != null) {
-      if (await recorder.isRecording()) await recorder.cancel();
+      if (await recorder.isRecording()) {
+        final path = await recorder.stop();
+        if (path != null) await deleteTemporaryRecording(path);
+      }
       await recorder.dispose();
     }
   }
@@ -194,23 +250,30 @@ class ChatMediaService {
 
 class VoicePlayback {
   final VoidCallback? onDisposed;
-  VoicePlayback({this.onDisposed});
+  final Future<void> Function()? beforePlay;
+  VoicePlayback({this.onDisposed, this.beforePlay});
   bool _disposed = false;
   AudioPlayer? _player;
   final _positions = StreamController<Duration>.broadcast();
   final _states = StreamController<bool>.broadcast();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   bool _loaded = false;
+  int _epoch = 0;
   Stream<Duration> get positions => _positions.stream;
   Stream<bool> get states => _states.stream;
 
   Future<void> play(DoctorMessage message) async {
+    if (_disposed) return;
+    final epoch = ++_epoch;
+    await beforePlay?.call();
+    if (_disposed || epoch != _epoch) return;
     if (message.bytes == null) {
       throw const ChatMediaException('Ce vocal est indisponible.');
     }
     if (_player == null) {
       _player = AudioPlayer();
       await _player!.setReleaseMode(ReleaseMode.stop);
+      if (_disposed || epoch != _epoch) return;
       _subscriptions.add(_player!.onPositionChanged.listen(_positions.add));
       _subscriptions.add(
         _player!.onPlayerStateChanged.listen(
@@ -223,18 +286,29 @@ class VoicePlayback {
         await _player!.seek(Duration.zero);
       }
       await _player!.resume();
+      if (_disposed || epoch != _epoch) await _player?.pause();
     } else {
       await _player!.play(
         BytesSource(message.bytes!, mimeType: message.mimeType ?? 'audio/wav'),
       );
       _loaded = true;
+      if (_disposed || epoch != _epoch) await _player?.pause();
     }
   }
 
-  Future<void> pause() async => _player?.pause();
+  Future<void> pause() async {
+    _epoch++;
+    await _player?.pause();
+  }
+
+  Future<void> seek(Duration position) async {
+    if (!_disposed) await _player?.seek(position);
+  }
+
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _epoch++;
     onDisposed?.call();
     for (final subscription in _subscriptions) {
       await subscription.cancel();

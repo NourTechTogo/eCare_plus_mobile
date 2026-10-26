@@ -1,5 +1,13 @@
 # Ajouts et corrections récents — Mobile Flutter eCare+
 
+## Livraison du 26 octobre 2026 : messages vocaux dans la messagerie réelle
+
+- Bouton microphone, minuterie, arrêt, annulation, écoute du brouillon et envoi explicite via la même API que le portail web. Enregistrement WAV mono 16 kHz ; arrêt avant 120 secondes sans envoi automatique.
+- Bulles vocales compactes dans le style eCare+ : lecture/pause, durée et progression déplaçable. Chargement authentifié des vocaux reçus, un seul lecteur actif.
+- Protection contre les permissions retardées, les changements de compte et les réponses obsolètes ; nettoyage des fichiers et ressources audio. Conservation du brouillon et des références lors d'un réessai.
+- Annulation/pause lors de la navigation et du passage en arrière-plan ; microphone réservé aux appels actifs. Le parcours local de démonstration reste compatible.
+- 171 tests réussis, 2 tests réseau optionnels ignorés, analyse sans anomalie ; web et APK recompilés. Échange vocal réel avec React vérifié avec microphone synthétique. [Validation et limites](docs/VALIDATION.md).
+
 ## Mise à jour graphique des pages annotées — 25 octobre 2026
 
 - Recomposition des cinq pages de Paramètres : traitements, notes des mesures, synchronisation, référencement QR et préférences du compte. Cartes, résumés, champs et commandes utilisent les couleurs et la typographie eCare+.
