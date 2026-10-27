@@ -12,7 +12,7 @@ class TermsOfUsePage extends StatelessWidget {
     sections: [
       LegalSection(
         'Objet de l’application',
-        'L’application permet de créer un compte, compléter son profil, transmettre des constantes et documents, répondre aux prises prescrites et échanger avec un professionnel affecté. Le carnet principal est conservé sur le serveur commun ; les archives locales anciennes sont préservées séparément. Le suivi clinique exige un dossier actif, une affectation autorisée et votre consentement. L’ouverture d’un compte ne garantit pas son rattachement. Un code administratif temporaire peut faciliter ce rattachement sans accorder de consentement clinique.',
+        'L’application permet de créer un compte, compléter son profil, transmettre des constantes et documents, déclarer ses traitements personnels, répondre aux prises et échanger avec un professionnel affecté. Une déclaration personnelle ne constitue pas une prescription médicale. Le carnet principal est conservé sur le serveur commun ; les archives locales anciennes sont préservées séparément. Le suivi personnel exige un dossier actif et votre consentement. Il est disponible sans médecin ni établissement. Le rattachement à un professionnel reste facultatif et soumis aux autorisations du serveur. Un code administratif temporaire peut faciliter ce rattachement sans accorder de consentement clinique.',
       ),
       LegalSection(
         'Accès et acceptation des conditions',

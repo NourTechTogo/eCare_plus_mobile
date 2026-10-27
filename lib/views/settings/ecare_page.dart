@@ -86,7 +86,7 @@ class ECarePage extends StatelessWidget {
             _HelpItem(
               title: 'Personnaliser mes suivis',
               text:
-                  'Complétez les informations de votre profil et vérifiez votre rattachement à un professionnel. Le suivi clinique reste soumis aux droits du dossier et à votre consentement. Les traitements prescrits et leurs horaires sont consultables depuis l’accueil ou les paramètres.',
+                  'Complétez votre profil et utilisez votre dossier personnel sans médecin ni établissement obligatoire. Le suivi reste soumis aux droits du dossier et à votre consentement. Les traitements et leurs horaires sont consultables depuis l’accueil ou les paramètres. Vos déclarations personnelles ne constituent pas une prescription médicale.',
               action: 'Modifier mon profil',
               onTap: () => Navigator.push(
                 context,

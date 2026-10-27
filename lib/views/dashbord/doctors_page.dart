@@ -215,7 +215,7 @@ class _DoctorsPageState extends State<DoctorsPage> {
               icon: Icons.medical_services_outlined,
               title: 'Aucun professionnel affecté',
               description:
-                  'Contactez votre établissement pour votre rattachement.',
+                  'Votre suivi personnel reste disponible. Le rattachement à un professionnel est facultatif.',
             )
           else if (doctors.isEmpty)
             const CareEmpty(

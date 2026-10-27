@@ -496,7 +496,8 @@ class _AssignedDoctorCarouselState extends State<_AssignedDoctorCarousel> {
       return const CareEmpty(
         icon: Icons.medical_services_outlined,
         title: 'Aucun professionnel affecté',
-        description: 'Contactez votre établissement pour être rattaché.',
+        description:
+            'Votre suivi personnel reste disponible. Le rattachement à un professionnel est facultatif.',
       );
     }
     return SizedBox(

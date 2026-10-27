@@ -1,5 +1,15 @@
 # Ajouts et corrections récents — Mobile Flutter eCare+
 
+## Phase 1 — patient autonome, 27 octobre 2026
+
+- Accès au suivi avec dossier personnel sans médecin affecté ; authentification et consentement conservés.
+- Rattachement présenté comme facultatif dans l'état du dossier et les textes d'aide, sans refonte visuelle ni suppression des appels/messages/articles.
+- Déclaration d'un traitement existant depuis Mes traitements ; saisie du médicament, de la dose, des dates et d'une prise quotidienne explicitement en UTC.
+- Distinction des déclarations personnelles dans le planning ; brouillon/réessai lié au compte initial et effacé en cas de changement de session.
+- 177 tests réussis, 2 réseau optionnels ignorés, analyse sans anomalie ; compilations web/APK réussies et recette réelle du formulaire avec l'API.
+- [Bilan et limites de phase 1](docs/refonte/PHASE_1_AUTONOMIE_PATIENT.md).
+
+
 ## Livraison du 26 octobre 2026 : messages vocaux dans la messagerie réelle
 
 - Bouton microphone, minuterie, arrêt, annulation, écoute du brouillon et envoi explicite via la même API que le portail web. Enregistrement WAV mono 16 kHz ; arrêt avant 120 secondes sans envoi automatique.

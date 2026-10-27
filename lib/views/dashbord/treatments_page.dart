@@ -7,6 +7,7 @@ import '../../widgets/care_page.dart';
 import '../../widgets/care_components.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_decor.dart';
+import '../../widgets/personal_treatment_form.dart';
 
 class TreatmentsPage extends StatefulWidget {
   const TreatmentsPage({super.key});
@@ -144,7 +145,7 @@ class _TreatmentsPageState extends State<TreatmentsPage> {
           icon: Icons.medication_outlined,
           title: 'Mon suivi au quotidien',
           description:
-              'Retrouvez vos prescriptions et confirmez vos prises au fil de la journée.',
+              'Retrouvez vos traitements et confirmez vos prises au fil de la journée.',
           footer: observance == null
               ? null
               : Container(
@@ -160,6 +161,22 @@ class _TreatmentsPageState extends State<TreatmentsPage> {
                 ),
         ),
         const SizedBox(height: 22),
+        CareAction(
+          label: 'Déclarer un traitement',
+          icon: Icons.add,
+          onPressed: busy || loading
+              ? null
+              : () async {
+                  final saved = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute<bool>(
+                      builder: (_) => const PersonalTreatmentForm(),
+                    ),
+                  );
+                  if (saved == true && mounted) await load();
+                },
+        ),
+        const SizedBox(height: 14),
         CareCard(
           child: Row(
             children: [
@@ -235,7 +252,7 @@ class _TreatmentsPageState extends State<TreatmentsPage> {
         ),
         if ((planning?['traitements'] as List? ?? []).isNotEmpty)
           CareSection(
-            title: 'Mes prescriptions',
+            title: 'Traitements enregistrés',
             child: Column(
               children: [
                 for (final raw in planning!['traitements'] as List)
@@ -243,9 +260,10 @@ class _TreatmentsPageState extends State<TreatmentsPage> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: CareDetail(
                       icon: Icons.medication_outlined,
-                      title: '${raw['libelle']}',
+                      title:
+                          '${raw['libelle']}${raw['declarationPersonnelle'] == true ? ' · Déclaration personnelle' : ''}',
                       detail:
-                          '${raw['consignes'] ?? 'Suivez les consignes de votre médecin.'}${(raw['prises'] as List? ?? []).any((p) => p['configurationRequise'] == true) ? '\nHoraires à préciser par votre médecin.' : ''}',
+                          '${raw['consignes'] ?? (raw['declarationPersonnelle'] == true ? 'Traitement déclaré par vous. Cette déclaration ne constitue pas une prescription médicale.' : 'Suivez les consignes de votre médecin.')}${(raw['prises'] as List? ?? []).any((p) => p['configurationRequise'] == true) ? '\nHoraires à préciser.' : ''}',
                     ),
                   ),
               ],

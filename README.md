@@ -1,5 +1,7 @@
 # eCare+
 
+Phase 1 : le suivi patient fonctionne sans médecin ni structure obligatoires. [Bilan de l’autonomie patient](docs/refonte/PHASE_1_AUTONOMIE_PATIENT.md).
+
 Messages vocaux privés disponibles : enregistrement, brouillon, envoi explicite et lecture avec progression, via le backend commun. Voir [les ajouts récents](AJOUTS_RECENTS.md) et [la validation du 26 octobre 2026](docs/VALIDATION.md).
 
 ## Livraison indépendante du 25 octobre 2026

@@ -102,11 +102,9 @@ class _SessionGuardState extends State<SessionGuard> {
         ),
       );
     }
-    if (widget.child is! ProfilePage &&
-        (session.profile?['dossierId'] == null ||
-            session.profile?['professionnelId'] == null)) {
+    if (widget.child is! ProfilePage && session.profile?['dossierId'] == null) {
       return CarePage(
-        title: 'Rattachement en attente',
+        title: 'Dossier en préparation',
         subtitle: 'Votre compte est créé.',
         child: Column(
           children: [
@@ -132,7 +130,19 @@ class DossierStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ApiSession>().profile;
-    if (p?['dossierId'] != null && p?['professionnelId'] != null) {
+    if (p?['dossierId'] != null &&
+        p?['structureId'] == null &&
+        p?['professionnelId'] == null) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'Dossier personnel : votre suivi est disponible sans médecin ni établissement. Le rattachement à un professionnel reste facultatif.',
+          ),
+        ),
+      );
+    }
+    if (p?['dossierId'] != null) {
       return const SizedBox.shrink();
     }
     return Card(
@@ -141,7 +151,7 @@ class DossierStatus extends StatelessWidget {
         child: Column(
           children: [
             const Text(
-              'Votre rattachement à un dossier actif et à un professionnel est en attente. Contactez votre établissement. Les fonctions cliniques restent soumises à cette affectation.',
+              'Votre dossier est en préparation. Actualisez pour réessayer. Votre suivi personnel ne nécessite pas de professionnel affecté.',
             ),
             TextButton(
               onPressed: () => Navigator.push(

@@ -20,7 +20,7 @@ class PrivacyPolicyPage extends StatelessWidget {
       ),
       LegalSection(
         'Consentement aux données de santé',
-        'Avant l’accès clinique, vous devez parcourir les conditions d’utilisation et cette politique jusqu’à leur fin, puis confirmer explicitement votre accord au traitement de vos données de santé. Le serveur enregistre la version des documents et l’acceptation. La création minimale du compte peut précéder la constitution d’un dossier actif et l’affectation d’un professionnel. Si vous ne disposez pas encore de cette affectation, contactez votre établissement pour poursuivre votre suivi.',
+        'Avant l’accès clinique, vous devez parcourir les conditions d’utilisation et cette politique jusqu’à leur fin, puis confirmer explicitement votre accord au traitement de vos données de santé. Le serveur enregistre la version des documents et l’acceptation. Votre compte dispose d’un dossier personnel utilisable avec votre consentement, sans médecin ni établissement. Un rattachement ultérieur à un professionnel reste facultatif et soumis aux autorisations du serveur.',
       ),
       LegalSection(
         'Conservation sur le serveur et sur l’appareil',
