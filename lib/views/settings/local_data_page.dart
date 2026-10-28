@@ -24,7 +24,7 @@ class LocalDataPage extends StatelessWidget {
         _card(
           'Mesures et agenda',
           Icons.timeline_rounded,
-          'Le profil, les mesures et les messages texte confirmés sont conservés par le serveur et rechargés après connexion. Le jeton reste uniquement en mémoire : un redémarrage impose une nouvelle connexion. Les données affichées sont retirées à la déconnexion. L’agenda personnel reste local à la session ; il ne réserve pas de consultation.',
+          'Le profil, les mesures et les messages texte confirmés sont conservés par le serveur et rechargés après connexion. Le jeton reste uniquement en mémoire : un redémarrage impose une nouvelle connexion. Les données affichées sont retirées à la déconnexion. Les dates confirmées de votre agenda personnel sont enregistrées sur le serveur et rechargées après connexion ; elles ne réservent pas de consultation.',
         ),
         const SizedBox(height: 16),
         _card(

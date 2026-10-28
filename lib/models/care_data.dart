@@ -18,12 +18,6 @@ class CareNotification {
   });
 }
 
-class CareAppointment {
-  final String doctor;
-  final DateTime date;
-  const CareAppointment({required this.doctor, required this.date});
-}
-
 class GlucoseReading {
   final double value;
   final DateTime date;
@@ -163,7 +157,6 @@ class CareData extends ChangeNotifier {
     notifyListeners();
   }
 
-  final List<CareAppointment> _appointments = [];
   final List<CareNotification> _notifications = [];
   final List<GlucoseReading> _readings = [];
   final List<BloodPressureReading> _bloodPressureReadings = [];
@@ -183,14 +176,6 @@ class CareData extends ChangeNotifier {
             remindersEnabled ||
             item.category != NotificationCategory.appointment,
       ),
-      for (final appointment
-          in remindersEnabled ? _appointments : <CareAppointment>[])
-        CareNotification(
-          title: appointment.doctor,
-          message: 'Rendez-vous dans votre agenda personnel',
-          date: appointment.date,
-          category: NotificationCategory.appointment,
-        ),
     ]..sort((a, b) => b.date.compareTo(a.date));
     return List.unmodifiable(items);
   }
@@ -200,21 +185,9 @@ class CareData extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<CareAppointment> get appointments => List.unmodifiable(_appointments);
   List<GlucoseReading> get readings => List.unmodifiable(_readings);
   List<BloodPressureReading> get bloodPressureReadings =>
       List.unmodifiable(_bloodPressureReadings);
-
-  void addAppointment(CareAppointment appointment) {
-    _appointments.add(appointment);
-    _appointments.sort((a, b) => a.date.compareTo(b.date));
-    notifyListeners();
-  }
-
-  void removeAppointment(CareAppointment appointment) {
-    _appointments.remove(appointment);
-    notifyListeners();
-  }
 
   void addReading(double value, {DateTime? date}) {
     _readings.add(GlucoseReading(value: value, date: date ?? DateTime.now()));
@@ -245,7 +218,6 @@ class CareData extends ChangeNotifier {
     _conversations.clear();
     _blockedDoctors.clear();
     _profilePhoto = null;
-    _appointments.clear();
     _notifications.clear();
     _readings.clear();
     _bloodPressureReadings.clear();

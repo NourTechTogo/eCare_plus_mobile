@@ -25,11 +25,11 @@ class _MainShellState extends State<MainShell> {
         Expanded(
           child: IndexedStack(
             index: _selected,
-            children: const [
-              HomePage(),
-              AppointmentsPage(showBack: false),
-              ArticlesPage(),
-              SettingsPage(),
+            children: [
+              const HomePage(),
+              AppointmentsPage(showBack: false, active: _selected == 1),
+              const ArticlesPage(),
+              const SettingsPage(),
             ],
           ),
         ),

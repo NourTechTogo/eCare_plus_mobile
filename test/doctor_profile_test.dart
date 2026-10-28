@@ -90,10 +90,10 @@ void main() {
     expect(find.text('TikTok'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Mon parcours'), 200);
     expect(find.text('Mon parcours'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Prendre rendez-vous'), 200);
-    await tester.tap(find.text('Prendre rendez-vous'));
+    await tester.scrollUntilVisible(find.text('Ajouter à mon agenda'), 200);
+    await tester.tap(find.text('Ajouter à mon agenda'));
     await tester.pumpAndSettle();
-    expect(find.text('Jours disponibles'), findsOneWidget);
+    expect(find.textContaining('Connectez-vous'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

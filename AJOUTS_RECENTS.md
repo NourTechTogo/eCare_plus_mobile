@@ -1,5 +1,27 @@
 # Ajouts et corrections récents — Mobile Flutter eCare+
 
+## Publication de l’agenda — 28 octobre 2026
+
+Le lot agenda personnel et calendrier est regroupé sur `ecare_mobile_autonomie_rapports`, dans le dépôt mobile uniquement, sans fusion dans main. Il comprend la persistance via le backend commun, les commandes versionnées et idempotentes, les rappels enregistrés, l’historique des annulations, le calendrier mensuel et son intégration au formulaire. Les mentions « local / non publié / aucun push » des entrées précédentes décrivent l’état avant cette publication.
+
+## 28 octobre 2026 — calendrier visuel de l’agenda (local)
+
+- Véritable calendrier mensuel français, lundi en première colonne, navigation entre mois/années, retour à aujourd’hui et accès direct à une date.
+- Jour sélectionné en bleu eCare+, repères sur les jours avec rendez-vous et compteur mensuel provenant des données serveur. La liste affiche le jour sélectionné, avec filtres Mes dates / Annulées et une actualisation compacte.
+- Un seul bouton d’ajout ; le formulaire reprend la date sélectionnée. Les cartes présentent l’heure, le motif, le professionnel facultatif et l’état réel du rappel.
+- Poppins, surfaces blanches arrondies, fond bleu pâle, accents eCare+ et navigation basse conservés. Contrôle à 320 px et texte agrandi jusqu’à 200 %.
+- 201 tests réussis, 2 réseau optionnels ignorés, analyse sans anomalie ; web release et APK debug compilés. Aucun push, aucun changement backend ou portail professionnel.
+
+## 28 octobre 2026 — agenda personnel connecté (travail local)
+
+- Remplacement de l’agenda limité à la session par les routes personnelles du backend : liste paginée, création, modification versionnée, annulation et historique persistants.
+- Professionnel facultatif ; retrait des disponibilités fictives. L’ajout d’une date ne réserve pas une consultation médicale.
+- Réessais avec la même référence, conflits explicites, succès après accusé, protection des champs lors d’un retrait de consentement.
+- Rappels enregistrés et états réels du serveur ; lien depuis les notifications vers la date concernée. Publication dans eCare+ distincte de la réception push/SMS.
+- Bandeau bleu, Poppins, cartes et navigation conservés ; champs arrondis reprenant le style du filtre de documents. Validation 320 px avec texte agrandi à 1,6.
+- Analyse sans anomalie, 197 tests réussis et 2 optionnels ignorés ; web release et APK debug recompilés. Aucun push supplémentaire, backend et web professionnel inchangés.
+- [Parcours et limites](docs/refonte/AGENDA_PERSONNEL_MOBILE.md), [validation](docs/VALIDATION.md).
+
 ## Publication sur la nouvelle branche - 28 octobre 2026
 
 Contenu regroupé sur `ecare_mobile_autonomie_rapports`, sans fusion dans main. Vérification prépublication : 186 tests réussis, 2 optionnels ignorés ; aucun échec. Voir [le bilan de publication](docs/PUBLICATION_2026-10-28.md). Les mentions « travail local / aucun push » des entrées antérieures décrivent leur état avant cette publication.

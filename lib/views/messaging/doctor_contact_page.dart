@@ -124,7 +124,7 @@ class DoctorContactPage extends StatelessWidget {
                         openAppointmentsPage(context, doctor: doctor.name),
                     icon: const Icon(Icons.calendar_month_outlined),
                     label: const Text(
-                      'Prendre rendez-vous',
+                      'Ajouter à mon agenda',
                       textAlign: TextAlign.center,
                     ),
                   ),

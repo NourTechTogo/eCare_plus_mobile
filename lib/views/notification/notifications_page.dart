@@ -1,3 +1,4 @@
+import '../dashbord/appointments_page.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -154,6 +155,16 @@ class _NotificationsPageState extends State<NotificationsPage>
         return;
       }
       if (!mounted) return;
+      if (n['typeRessource'] == 'RENDEZ_VOUS_PERSONNEL') {
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                AppointmentsPage(initialAppointmentId: '${n['ressourceId']}'),
+          ),
+        );
+        return;
+      }
       if (n['typeRessource'] == 'TRAITEMENT') {
         await Navigator.push(
           context,
@@ -214,7 +225,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           'APPEL' => 'Appels',
           'TRAITEMENT' => 'Médicaments',
           'MESURE' => 'Mesures',
-          'RENDEZ_VOUS' => 'Rendez-vous',
+          'RENDEZ_VOUS' || 'RENDEZ_VOUS_PERSONNEL' => 'Rendez-vous',
           _ => 'Informations',
         };
   IconData categoryIcon(String label) => switch (label) {
@@ -309,6 +320,7 @@ class _NotificationsPageState extends State<NotificationsPage>
               children: [
                 if (item['_alert'] == true ||
                     const [
+                      'RENDEZ_VOUS_PERSONNEL',
                       'TRAITEMENT',
                       'ALERTE',
                       'CONVERSATION',

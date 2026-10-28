@@ -95,12 +95,6 @@ void main() {
         category: NotificationCategory.medication,
       ),
     );
-    data.addAppointment(
-      CareAppointment(
-        doctor: 'Dr Johnson Mike',
-        date: now.add(const Duration(days: 1)),
-      ),
-    );
     Navigator.of(
       tester.element(find.byType(FollowUpPage)),
     ).push(MaterialPageRoute<void>(builder: (_) => const NotificationsPage()));

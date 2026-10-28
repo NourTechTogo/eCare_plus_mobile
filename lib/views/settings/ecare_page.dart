@@ -108,7 +108,7 @@ class ECarePage extends StatelessWidget {
             _HelpItem(
               title: 'Comprendre mes rappels',
               text:
-                  'Les notifications affichées proviennent du serveur. Les préférences de l’agenda restent locales ; elles ne programment pas d’alarme ni de notification système lorsque l’application est fermée. Lire une notification ne confirme pas une prise de médicament.',
+                  'Les notifications affichées proviennent du serveur. Les dates et rappels de l’agenda personnel sont enregistrés sur le serveur. Un rappel publié dans eCare+ ne garantit pas une notification système lorsque l’application est fermée ; les canaux externes doivent être configurés. Lire une notification ne confirme pas une prise de médicament.',
               action: 'Voir mes notifications',
               onTap: () =>
                   Navigator.pushNamed(context, AppRoutes.notifications),

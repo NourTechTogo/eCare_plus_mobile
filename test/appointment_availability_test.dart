@@ -1,87 +1,217 @@
-import 'package:ecare_plus_mobile/data/doctor_catalog.dart';
-import 'package:ecare_plus_mobile/models/care_data.dart';
-import 'package:ecare_plus_mobile/views/dashbord/appointments_page.dart';
+import 'package:ecare_plus_mobile/models/personal_appointment.dart';
+import 'dart:convert';
+import 'package:ecare_plus_mobile/services/personal_agenda_api.dart';
+import 'package:ecare_plus_mobile/widgets/appointment_availability_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-
-Finder keyPrefix(String prefix) => find.byWidgetPredicate(
-  (w) =>
-      w.key is ValueKey<String> &&
-      (w.key as ValueKey<String>).value.startsWith(prefix),
-);
-Future<void> tapVisible(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
-  await tester.tap(finder);
-  await tester.pumpAndSettle();
-}
-
-Future<void> chooseDay(WidgetTester tester) async {
-  await tapVisible(tester, keyPrefix('day-').first);
-  await tapVisible(tester, find.text('Suivant'));
-}
+import 'support/api_fixture.dart';
+import 'personal_agenda_api_test.dart' show agendaFixture;
 
 void main() {
   testWidgets(
-    'Changing local example doctor clears the previously selected day',
+    'Personal form accepts optional professional and confirms after API ACK',
     (tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+      Map<String, dynamic>? sent;
+      final session = await signedInSession(
+        handler: (r) async {
+          sent = jsonDecode(r.body) as Map<String, dynamic>;
+          return jsonResponse(jsonEncode({...agendaFixture(), ...sent!}), 201);
+        },
+      );
+      final api = PersonalAgendaApi(session);
+      addTearDown(api.dispose);
+      var saved = false;
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (_) => CareData(),
-          child: MaterialApp(
-            home: AppointmentsPage(initialDoctor: doctorCatalog.first.name),
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AppointmentAvailabilityForm(
+                api: api,
+                onSaved: (_) {
+                  saved = true;
+                },
+              ),
+            ),
           ),
         ),
       );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Motif'),
+        'Bilan de suivi',
+      );
+      await tester.ensureVisible(find.text('Enregistrer'));
+      await tester.tap(find.text('Enregistrer'));
       await tester.pumpAndSettle();
-      await tapVisible(tester, keyPrefix('day-').first);
-      await tapVisible(tester, find.text('Modifier le médecin'));
-      await tapVisible(
-        tester,
-        find.byKey(ValueKey('doctor-${doctorCatalog.last.name}')),
-      );
-      await tapVisible(tester, find.text('Suivant'));
-      expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Suivant'))
-            .onPressed,
-        isNull,
-      );
-      expect(find.text('Jours disponibles'), findsOneWidget);
-      expect(tester.takeException(), isNull);
+      expect(saved, true);
+      expect(sent!['professionnelNom'], isNull);
+      expect(sent!['sourceRef'], isNotEmpty);
+      expect(sent!['dateHeure'], endsWith('Z'));
+      expect(sent!['fuseau'], 'UTC');
+      session.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
-  testWidgets('Local agenda requires day and time then removes occupied slot', (
+  testWidgets('Uncertain save freezes fields and retries identical command', (
     tester,
   ) async {
-    final data = CareData();
+    final bodies = <String>[];
+    final session = await signedInSession(
+      handler: (r) async {
+        bodies.add(r.body);
+        if (bodies.length == 1) return jsonResponse('{}', 503);
+        return jsonResponse(
+          jsonEncode({
+            ...agendaFixture(),
+            ...jsonDecode(r.body) as Map<String, dynamic>,
+          }),
+          201,
+        );
+      },
+    );
+    final api = PersonalAgendaApi(session);
+    addTearDown(api.dispose);
+    var saved = false;
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: data,
-        child: MaterialApp(
-          home: AppointmentsPage(initialDoctor: doctorCatalog.first.name),
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AppointmentAvailabilityForm(
+              api: api,
+              onSaved: (_) {
+                saved = true;
+              },
+            ),
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    expect(find.byType(TextFormField), findsNothing);
-    await chooseDay(tester);
-    expect(
-      find.textContaining('ne réservent pas de consultation réelle'),
-      findsOneWidget,
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Motif'),
+      'Bilan',
     );
-    final slot = keyPrefix('slot-').first;
-    final time = (tester.widget(slot).key as ValueKey<String>).value;
-    await tapVisible(tester, slot);
-    await tapVisible(tester, find.text('Ajouter'));
-    expect(data.appointments, hasLength(1));
-    expect(data.appointments.single.doctor, doctorCatalog.first.name);
-    await tapVisible(tester, find.byTooltip('Ajouter un rendez-vous'));
-    await chooseDay(tester);
-    expect(find.byKey(ValueKey(time)), findsNothing);
+    await tester.ensureVisible(find.text('Enregistrer'));
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+    expect(saved, false);
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Motif'))
+          .enabled,
+      false,
+    );
+    await tester.ensureVisible(find.text('Réessayer le même enregistrement'));
+    await tester.tap(find.text('Réessayer le même enregistrement'));
+    await tester.pumpAndSettle();
+    expect(bodies.length, 2);
+    expect(bodies[1], bodies[0]);
+    expect(saved, true);
+    session.clear();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+    'Consent withdrawal hides an open form and clears private fields immediately',
+    (tester) async {
+      var consent = true;
+      final session = await signedInSession(
+        handler: (r) async => jsonResponse(
+          jsonEncode({...patientFixture(), 'consentementAccepte': consent}),
+          200,
+        ),
+      );
+      final api = PersonalAgendaApi(session);
+      addTearDown(api.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AppointmentAvailabilityForm(api: api, onSaved: (_) {}),
+            ),
+          ),
+        ),
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Motif'),
+        'Informations privées du rendez-vous',
+      );
+      consent = false;
+      await session.refreshProfile();
+      await tester.pumpAndSettle();
+      expect(find.text('Informations privées du rendez-vous'), findsNothing);
+      expect(find.byType(TextFormField), findsNothing);
+      expect(
+        find.textContaining('Session ou consentement modifié'),
+        findsOneWidget,
+      );
+      session.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets(
+    'Unicode length validation shows an inline error without an uncaught exception or request',
+    (tester) async {
+      var writes = 0;
+      final session = await signedInSession(
+        handler: (r) async {
+          writes++;
+          return jsonResponse('{}', 500);
+        },
+      );
+      final api = PersonalAgendaApi(session);
+      addTearDown(api.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AppointmentAvailabilityForm(api: api, onSaved: (_) {}),
+            ),
+          ),
+        ),
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Motif'),
+        List.filled(101, '😀').join(),
+      );
+      await tester.ensureVisible(find.text('Enregistrer'));
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(writes, 0);
+      expect(find.textContaining('200 unités'), findsOneWidget);
+      session.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets('Existing server dates before 1900 can open the date picker', (
+    tester,
+  ) async {
+    final session = await signedInSession();
+    final api = PersonalAgendaApi(session);
+    addTearDown(api.dispose);
+    final appointment = PersonalAppointment.fromServer({
+      ...agendaFixture(),
+      'dateHeure': '1899-12-30T10:30:00Z',
+    }, 'patient-a');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AppointmentAvailabilityForm(
+              api: api,
+              appointment: appointment,
+              onSaved: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    final date = find.text('30/12/1899');
+    await tester.ensureVisible(date);
+    await tester.tap(date);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    session.clear();
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

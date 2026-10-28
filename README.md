@@ -1,5 +1,9 @@
 # eCare+
 
+Calendrier mensuel eCare+ disponible dans Rendez-vous : navigation, jours avec rendez-vous, liste du jour et date préremplie à l’ajout. Charte et backend conservés. Validation : 201 tests réussis, 2 optionnels ignorés ; compilation web et Android locale. [Détails du calendrier](docs/superpowers/plans/2026-10-28-agenda-calendrier-visuel.md).
+
+Agenda personnel connecté en local le 28 octobre 2026 : dates et rappels persistants, modification et annulation via le backend commun, style eCare+ conservé. [Parcours et limites](docs/refonte/AGENDA_PERSONNEL_MOBILE.md), [validation](docs/VALIDATION.md). Le lot agenda/calendrier est regroupé sur `ecare_mobile_autonomie_rapports`.
+
 Rapports de consultation intégrés en local le 28 octobre 2026 : [parcours et limites](docs/refonte/RAPPORTS_CONSULTATION.md), [validation](docs/VALIDATION.md). Branche de publication : `ecare_mobile_autonomie_rapports`, sans fusion dans main.
 
 Phase 1 : le suivi patient fonctionne sans médecin ni structure obligatoires. [Bilan de l’autonomie patient](docs/refonte/PHASE_1_AUTONOMIE_PATIENT.md).

@@ -1,5 +1,27 @@
 # Validation et limites des livraisons eCare+
 
+## Publication de l’agenda — 28 octobre 2026
+
+Le lot agenda personnel et calendrier est regroupé sur `ecare_mobile_autonomie_rapports`, dans le dépôt mobile uniquement, sans fusion dans main. Il comprend la persistance via le backend commun, les commandes versionnées et idempotentes, les rappels enregistrés, l’historique des annulations, le calendrier mensuel et son intégration au formulaire. Les mentions « local / non publié / aucun push » des entrées précédentes décrivent l’état avant cette publication.
+
+## 28 octobre 2026 — calendrier mensuel eCare+
+
+- Analyse finale sans anomalie ; **201 tests réussis, 2 réseau optionnels ignorés, aucun échec**. Nouveaux tests : grille et libellés français, sélection et repères serveur, changement d’année et bornes, 320 px avec texte à 200 %, filtrage par jour, date préremplie et sélection conservée lors d’une actualisation.
+- Revue indépendante : absence d’action sémantique sur les dates reproduite RED, correction onTap et vérification GREEN. La régression à 200 % a aussi révélé une hauteur insuffisante des numéros ; ils restent maintenant sur une ligne dans une zone contrainte, avec libellé accessible complet. Tests complets repassés après correction. Pas de recette TalkBack/VoiceOver sur téléphone physique dans ce lot.
+- Web release et APK debug locaux recompilés. Les avertissements de maintenance AGP/Kotlin préexistants ne bloquent pas la compilation ; l’APK n’est pas installé dans ce lot.
+- Recette réelle via navigateur : calendrier alimenté par un compte fictif autonome, sélection des jours, changement de mois et retour à aujourd’hui, préremplissage de date, création 201, reconnexion persistante, annulation 200 et historique. Captures 320/390/605 px inspectées ; aucune erreur de console ou de page.
+- Premier jour présenté : premier jour actif à partir d’aujourd’hui, horaires passés du jour compris, sinon dernière date active passée ou aujourd’hui si vide. Une sélection manuelle est conservée lors des rechargements. Les filtres portent sur le jour sélectionné ; une annulation ne supprime pas le rendez-vous de l’historique.
+- API, droits et confidentialité inchangés. Le calendrier représente l’agenda personnel, pas des disponibilités publiées ni une réservation auprès d’un professionnel. Aucun push supplémentaire.
+
+## 28 octobre 2026 — agenda personnel connecté
+
+- Analyse Flutter finale : aucune anomalie. Suite complète finale : **197 tests réussis, 2 tests réseau optionnels ignorés, aucun échec**. Contrats de pagination/UUID/version, annulation incertaine sans retrait optimiste, reprise identique, lien de notification, garde de session et affichage 320 px avec texte à 1,6 couverts.
+- Revue indépendante : formulaire visible après retrait de consentement, validation Unicode non gérée et bornes de date reproduits RED puis corrigés GREEN. Les trois corrections sont incluses dans la suite finale. Un libellé de test de fiche médecin a été adapté à « Ajouter à mon agenda » et à la garde de connexion.
+- Compilations finales web release et APK debug réussies. API locale : http://127.0.0.1:8081/api/v1. APK : build/app/outputs/flutter-apk/app-debug.apk ; son utilisation sur téléphone nécessite une liaison au backend (par exemple adb reverse tcp:8081 tcp:8081). Pas d’installation ni de recette physique Android/iOS dans ce lot. Avertissements AGP/Kotlin préexistants conservés.
+- Recette finale Playwright / Edge avec un compte fictif autonome : création 201 avec rappel stocké, modification 200, nouvelle connexion et date retrouvée, annulation 200 puis historique retrouvé. Captures relues à 320, 390 et 605 px ; aucune erreur de console ou de page. Le lien de notification est couvert par les tests widgets ; le déclenchement effectif d’un rappel en temps réel n’a pas été attendu dans cette recette.
+- Le push/SMS externe, le fonctionnement hors connexion durable et les changements d’heure sur téléphone réel restent des recettes/lots distincts. Les rappels publiés dans l’application ne sont pas présentés comme des notifications externes reçues.
+- Travail local sur ecare_mobile_autonomie_rapports ; aucun push supplémentaire. Backend et frontend web inchangés.
+
 ## Publication sur la nouvelle branche - 28 octobre 2026
 
 Contenu regroupé sur `ecare_mobile_autonomie_rapports`, sans fusion dans main. Vérification prépublication : 186 tests réussis, 2 optionnels ignorés ; aucun échec. Voir [le bilan de publication](PUBLICATION_2026-10-28.md). Les mentions « travail local / aucun push » des entrées antérieures décrivent leur état avant cette publication.
