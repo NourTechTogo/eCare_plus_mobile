@@ -161,6 +161,11 @@ class SettingsPage extends StatelessWidget {
             title: 'Mon espace',
             children: [
               SettingsItem(
+                icon: Icons.summarize_outlined,
+                title: 'Mes rapports',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.reports),
+              ),
+              SettingsItem(
                 icon: Icons.medication_outlined,
                 title: 'Mes traitements',
                 onTap: () => Navigator.push(

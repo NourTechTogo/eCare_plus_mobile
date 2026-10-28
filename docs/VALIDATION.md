@@ -1,5 +1,20 @@
 # Validation et limites des livraisons eCare+
 
+## Publication sur la nouvelle branche - 28 octobre 2026
+
+Contenu regroupé sur `ecare_mobile_autonomie_rapports`, sans fusion dans main. Vérification prépublication : 186 tests réussis, 2 optionnels ignorés ; aucun échec. Voir [le bilan de publication](PUBLICATION_2026-10-28.md). Les mentions « travail local / aucun push » des entrées antérieures décrivent leur état avant cette publication.
+
+## 28 octobre 2026 - rapports personnels et PDF
+
+- Flutter analyze : aucune anomalie. Suite complète : **186 tests réussis, 2 tests réseau optionnels ignorés**, aucun échec. Les 9 nouveaux tests couvrent contrat, dates civiles/borne, réessai stable puis nouvelle génération, PDF invalide, retrait du consentement/changement de session, réponse tardive, confirmation annulée et petit écran 320 px avec texte agrandi à 1,4 et graphique renseigné.
+- Revue indépendante : conservation indue de la référence après génération confirmée détectée, test RED puis correction GREEN ; la référence reste conservée uniquement pour le réessai incertain. Relecture sans P1/P2 restant identifié. Le test avec graphique a aussi révélé un effet Ink masqué dans la carte ; ajout du Material approprié, suite complète repassée.
+- Compilations web release et APK debug local réussies. L'APK est build/app/outputs/flutter-apk/app-debug.apk. Avertissements de maintenance AGP/Kotlin existants, sans montée de version dans ce lot. Pas d'installation ni de recette du sélecteur système sur téléphone/iOS dans ce lot.
+- Recette Playwright sur l'API réelle : patient fictif affecté, deux mesures, génération 201 et moyenne 130, vrai PDF téléchargé, confirmation de dépôt annulable, copie COMPTE_RENDU déposée 201 puis téléchargée par le médecin autorisé dans le web. Comparaison des deux PDF identique octet par octet. Cas patient autonome sans médecin/structure également généré en 201, sans données inventées.
+- Écrans Flutter contrôlés à 320/390/605 px ; captures relues, boutons actifs hors transfert, développement de la liste des valeurs vérifié après la dernière compilation. Aucun échec de requête ni erreur de page/console sur le parcours de consultation final. Browser plugin absent dans cette session : runtime Playwright/Edge existant utilisé, aucune dépendance navigateur ajoutée.
+- Serveurs locaux laissés disponibles : Flutter 5184 et API commune 8081. Fichiers, captures, comptes fictifs, journaux et secrets de recette restent hors des dépôts. Aucun changement backend, commit ou push.
+
+[Parcours, contrats et limites](refonte/RAPPORTS_CONSULTATION.md).
+
 ## Phase 1 — autonomie patient, 27 octobre 2026
 
 - Backend : 186 tests validés, aucun échec, erreur ou test ignoré dans les derniers rapports de chaque classe. La suite complète PostgreSQL/H2 a été exécutée ; après adaptation de l'ancienne attente « nouveau compte sans dossier », les trois scénarios HTTP de cette classe ont été rejoués avec succès via `mvnw -o -Dtest=BackendParcoursCompletTests verify`. Aucun code de production n'a changé entre ces deux dernières exécutions.

@@ -1,3 +1,4 @@
+import 'views/reports/consultation_reports_page.dart';
 import 'services/api_session.dart';
 import 'widgets/session_guard.dart';
 import 'package:flutter/material.dart';
@@ -144,6 +145,7 @@ class ECarePlusApp extends StatelessWidget {
                 SessionGuard(child: GlucoseFollowUpPage()),
             AppRoutes.bloodPressureFollowUp: (_) =>
                 const SessionGuard(child: BloodPressureFollowUpPage()),
+            AppRoutes.reports: (_) => const SessionGuard(child: ConsultationReportsPage()),
             AppRoutes.documents: (_) => SessionGuard(child: DocumentsPage()),
             AppRoutes.treatments: (_) =>
                 const SessionGuard(child: TreatmentsPage()),

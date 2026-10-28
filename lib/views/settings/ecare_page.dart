@@ -61,6 +61,11 @@ class ECarePage extends StatelessWidget {
             title: 'Explorer mon espace',
             children: [
               SettingsItem(
+                icon: Icons.summarize_outlined,
+                title: 'Mes rapports',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.reports),
+              ),
+              SettingsItem(
                 icon: Icons.monitor_heart_outlined,
                 title: 'Mes constantes',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.followUp),

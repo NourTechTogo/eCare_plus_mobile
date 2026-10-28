@@ -1,5 +1,17 @@
 # Ajouts et corrections récents — Mobile Flutter eCare+
 
+## Publication sur la nouvelle branche - 28 octobre 2026
+
+Contenu regroupé sur `ecare_mobile_autonomie_rapports`, sans fusion dans main. Vérification prépublication : 186 tests réussis, 2 optionnels ignorés ; aucun échec. Voir [le bilan de publication](docs/PUBLICATION_2026-10-28.md). Les mentions « travail local / aucun push » des entrées antérieures décrivent leur état avant cette publication.
+
+## 28 octobre 2026 - rapports de consultation
+
+- Nouvelle entrée Mes rapports : période/fuseau, génération et liste persistantes, détail du snapshot, graphiques et valeurs.
+- PDF privé téléchargeable ; dépôt volontaire d'une copie COMPTE_RENDU dans le carnet après confirmation, compatible avec le portail web.
+- Références de réessai conservées en cas d'incertitude, renouvelées après génération confirmée ; garde de session et purge au retrait du consentement.
+- Styles et navigation existants conservés. Aucune dépendance ni permission backend ajoutée, aucun commit/push.
+- [Parcours, contrats et limites](docs/refonte/RAPPORTS_CONSULTATION.md). Résultats dans docs/VALIDATION.md.
+
 ## Phase 1 — patient autonome, 27 octobre 2026
 
 - Accès au suivi avec dossier personnel sans médecin affecté ; authentification et consentement conservés.

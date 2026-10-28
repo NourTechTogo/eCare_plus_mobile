@@ -1,5 +1,7 @@
 # eCare+
 
+Rapports de consultation intégrés en local le 28 octobre 2026 : [parcours et limites](docs/refonte/RAPPORTS_CONSULTATION.md), [validation](docs/VALIDATION.md). Branche de publication : `ecare_mobile_autonomie_rapports`, sans fusion dans main.
+
 Phase 1 : le suivi patient fonctionne sans médecin ni structure obligatoires. [Bilan de l’autonomie patient](docs/refonte/PHASE_1_AUTONOMIE_PATIENT.md).
 
 Messages vocaux privés disponibles : enregistrement, brouillon, envoi explicite et lecture avec progression, via le backend commun. Voir [les ajouts récents](AJOUTS_RECENTS.md) et [la validation du 26 octobre 2026](docs/VALIDATION.md).

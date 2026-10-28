@@ -19,6 +19,7 @@ class AppRoutes {
   static const String followUp = '/follow-up';
   static const String glucoseFollowUp = '/follow-up/glucose';
   static const String bloodPressureFollowUp = '/follow-up/blood-pressure';
+  static const String reports = '/reports';
   static const String documents = '/documents';
   static const String treatments = '/treatments';
   static const String doctors = '/doctors';
